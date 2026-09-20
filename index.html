@@ -4,47 +4,59 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dumul — Indonesian Alternative Rock</title>
-<meta name="description" content="Dumul is an Indonesian alternative rock project. Tracks: Limerence, Glitch, Nastenka, Larung. IG @dumuldumbowl">
+<meta name="description" content="Dumul is an Indonesian alternative rock project. IG @dumuldumbowl">
 <style>
-body{
-  background:#0a1218;
-  color:#b8c6d6;
-  font-family:system-ui, sans-serif;
-  max-width:720px;
-  margin:0 auto;
-  padding:50px 24px;
-  line-height:1.8;
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a1218;color:#b8c6d6;font-family:system-ui;line-height:1.7}
+.hero{
+  height:100vh;
+  position:relative;
+  background: linear-gradient(rgba(10,18,24,0.65), rgba(10,18,24,0.65)), url('cover.jpg');
+  background-size:cover;
+  background-position:center 38%;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center
 }
-h1{
-  font-size:62px;
-  letter-spacing:6px;
-  color:#e6eef8;
-  margin:0;
-  text-shadow: 0 0 20px rgba(110,229,255,0.4);
-}
-a{color:#6ee5ff;text-decoration:none}
-a:hover{color:#ff7ad9}
-hr{border:0;border-top:1px solid #1e2e3e;margin:40px 0}
-.glitch{color:#6ee5ff;}
-.box{border:1px solid #1e2e3e;background:rgba(20,35,50,0.5);padding:24px;margin-top:30px}
+.hero h1{font-size:64px;letter-spacing:8px;color:#e6eef8;text-shadow:0 0 25px rgba(110,229,255,0.6);position:relative;z-index:2}
+.hero p{color:#6ee5ff;letter-spacing:3px;margin-top:10px;position:relative;z-index:2}
+#glitch{position:absolute;top:50%;left:50%;transform:translate(-50%,-10%);width:640px;max-width:90vw;height:140px;z-index:1}
+.content{max-width:720px;margin:0 auto;padding:50px 24px}
+a{color:#6ee5ff;text-decoration:none} a:hover{color:#ff7ad9}
+.box{border:1px solid #1e2e3e;background:rgba(20,35,50,0.5);padding:24px;margin:30px 0}
 </style>
 </head>
 <body>
-<h1>DUMUL</h1>
-<p><span class="glitch">Indonesian alternative rock project.</span> Solo project based in Indonesia.</p>
-
-<div class="box">
-<h2 style="margin:0 0 10px 0;color:#e6eef8">Tracks</h2>
-<p>Limerence // Glitch // Nastenka // Larung</p>
-<p style="font-size:14px;color:#8a9bb0">Songs written by Dumul, mixing assisted by Suno.</p>
+<div class="hero">
+  <canvas id="glitch"></canvas>
+  <h1>DUMUL</h1>
+  <p>Indonesian alternative rock project</p>
 </div>
-
-<h2>Find me</h2>
-<p>
-<a href="https://www.last.fm/music/Dumul">Last.fm</a> — 
-<a href="https://instagram.com/dumuldumbowl">Instagram @dumuldumbowl</a>
-</p>
-
-<p style="margin-top:60px;color:#4a5d73;font-size:12px">© 2026 Dumul — built from glitch and limerence</p>
+<div class="content">
+  <div class="box">
+    <h2 style="color:#e6eef8;margin-bottom:10px">Tracks</h2>
+    <p>Limerence // Glitch // Nastenka // Larung</p>
+    <p style="font-size:14px;color:#8a9bb0;margin-top:10px">Songs written by Dumul, mixing assisted by Suno.</p>
+  </div>
+  <h2>Find me</h2>
+  <p><a href="https://www.last.fm/music/Dumul">Last.fm</a> — <a href="https://instagram.com/dumuldumbowl">Instagram @dumuldumbowl</a></p>
+  <p style="margin-top:60px;color:#4a5d73;font-size:12px">© 2026 Dumul — built from glitch and limerence</p>
+</div>
+<script>
+const c=document.getElementById('glitch'),x=c.getContext('2d');
+let w,h,dpr=window.devicePixelRatio||1;
+function rs(){w=c.clientWidth;h=c.clientHeight;c.width=w*dpr;c.height=h*dpr;x.setTransform(dpr,0,0,dpr,0,0)}
+rs();addEventListener('resize',rs);
+let pts=[...Array(22)].map(()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*1.2,vy:(Math.random()-.5)*1.2}));
+function loop(t){
+ x.clearRect(0,0,w,h);x.save();x.globalAlpha=0.8+Math.sin(t*0.002)*0.2;
+ for(let i=0;i<3;i++){x.beginPath();x.strokeStyle=i%2?'#6ee5ff':'#ff7ad9';x.lineWidth=1;
+ let yy=h/2+Math.sin(t*0.001+i)*10,seg=12;
+ for(let s=0;s<=seg;s++){let xx=(w/seg)*s+(Math.random()-.5)*(s%3==0?18:0);if(s==0)x.moveTo(xx,yy);else x.lineTo(xx,yy+(Math.random()-.5)*6);}x.stroke();}
+ pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;
+ x.beginPath();x.fillStyle=Math.random()>0.5?'#6ee5ff':'#ff7ad9';x.shadowColor=x.fillStyle;x.shadowBlur=12;x.arc(p.x,p.y,1.8,0,6.28);x.fill();});
+ for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){let dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.hypot(dx,dy);
+ if(d<110){x.beginPath();x.strokeStyle='rgba(110,229,255,'+(0.25-d/440)+')';x.lineWidth=0.6;x.moveTo(pts[i].x,pts[i].y);x.lineTo(pts[j].x,pts[j].y);x.stroke();}}
+ x.restore();requestAnimationFrame(loop);
+}requestAnimationFrame(loop);
+</script>
 </body>
 </html>
