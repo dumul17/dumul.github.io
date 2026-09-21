@@ -41,12 +41,23 @@ Error generating stack: `+o.message+`
   <script>(function(){function m(a){var h=a.getAttribute("href");if(!h)return;try{var u=new URL(h,document.baseURI);if((u.protocol==="http:"||u.protocol==="https:")&&u.host!==location.host){a.target="_blank";a.rel="noopener noreferrer";}}catch(e){}}function s(){document.querySelectorAll("a[href]").forEach(m);}if(document.readyState!=="loading"){s();}else{document.addEventListener("DOMContentLoaded",s);}document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest("a[href]");if(a){m(a);}},true);})();</script>
   
 <style>
-[class*="space-y-[1px]"] > div{cursor:pointer;-webkit-tap-highlight-color:transparent}
+/* layout: hero dirapetin, daftar lagu langsung di bawah spektrum */
+section[class*="h-[100svh]"]{height:auto!important;min-height:0!important}
+section[class*="h-[100svh]"] > div[class*="justify-center"]{height:auto!important;justify-content:flex-start!important;padding-top:30px;padding-bottom:4px}
+section[class*="h-[100svh]"] div[class*="w-[min(92vw,640px)]"]{margin-top:6px!important}
+section[class*="h-[100svh]"] p[class*="tracking-[0.32em]"]{margin-top:6px!important}
+section[class*="h-[100svh]"] div[class*="bottom-8"]{position:static!important;transform:none!important;margin-top:14px!important;gap:6px!important}
+section[class*="h-[100svh]"] div[class*="h-[28px]"]{height:16px!important}
+div[class*="max-w-[720px]"]{padding-top:10px!important}
+div[class*="max-w-[720px]"] > div[class*="mb-14"]{margin-bottom:14px!important}
+div[class*="mt-8"][class*="space-y-[1px]"]{margin-top:12px!important}
+@media (min-width:640px){section[class*="h-[100svh]"] > div[class*="justify-center"]{padding-top:56px;padding-bottom:12px}}
+[class*="space-y-[1px]"] > div{cursor:pointer;-webkit-tap-highlight-color:transparent;padding-top:15px!important;padding-bottom:15px!important}
 [class*="space-y-[1px]"] > div span.display::before{content:"\25B6\FE0E";display:inline-block;width:1.5em;font-size:.6em;opacity:.45;transition:opacity .2s}
 [class*="space-y-[1px]"] > div:hover span.display::before{opacity:.9}
 [class*="space-y-[1px]"] > div.dm-playing span.display{color:#6ee5ff}
 [class*="space-y-[1px]"] > div.dm-playing span.display::before{content:"\275A\275A";opacity:1;letter-spacing:-.15em}
-.dm-lyrics{display:none;position:relative;max-height:210px;overflow-y:auto;margin:0;padding:16px 8px 22px 1.6rem;scrollbar-width:none;-webkit-mask-image:linear-gradient(transparent 0,#000 12%,#000 88%,transparent 100%);mask-image:linear-gradient(transparent 0,#000 12%,#000 88%,transparent 100%)}
+.dm-lyrics{display:none;position:relative;max-height:min(210px,28vh);overflow-y:auto;margin:0;padding:14px 8px 18px 1.6rem;scrollbar-width:none;-webkit-mask-image:linear-gradient(transparent 0,#000 12%,#000 88%,transparent 100%);mask-image:linear-gradient(transparent 0,#000 12%,#000 88%,transparent 100%)}
 .dm-lyrics::-webkit-scrollbar{display:none}
 .dm-lyrics.dm-open{display:block}
 .dm-line{margin:0;padding:3px 0;font-size:15px;line-height:1.7;color:rgba(214,228,240,.75);transition:color .25s}
@@ -58,8 +69,12 @@ Error generating stack: `+o.message+`
 #dm-toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:50;max-width:90vw;padding:10px 16px;border-radius:999px;background:rgba(18,29,38,.95);border:1px solid rgba(110,229,255,.25);color:#e6eef8;font-size:12px;letter-spacing:.05em}
 /* mini player */
 body.dm-has-bar{padding-bottom:calc(66px + env(safe-area-inset-bottom,0px));background:#0a1218}
-#dm-bar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:none;align-items:center;gap:14px;padding:10px 18px calc(10px + env(safe-area-inset-bottom,0px));background:rgba(10,18,24,.94);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid rgba(110,229,255,.14)}
+#dm-bar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:none;align-items:center;gap:8px;padding:10px 18px calc(10px + env(safe-area-inset-bottom,0px));background:rgba(10,18,24,.94);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid rgba(110,229,255,.14)}
 #dm-bar.dm-show{display:flex}
+#dm-prev,#dm-next{flex:none;width:30px;height:30px;border:0;border-radius:50%;background:transparent;color:rgba(184,198,214,.8);cursor:pointer;display:grid;place-items:center;padding:0;-webkit-tap-highlight-color:transparent}
+#dm-prev:active,#dm-next:active{color:#6ee5ff}
+#dm-prev svg,#dm-next svg{width:16px;height:16px;display:block}
+.dm-mid{margin-left:6px}
 #dm-pp{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid rgba(110,229,255,.45);background:rgba(110,229,255,.06);color:#6ee5ff;cursor:pointer;display:grid;place-items:center;padding:0;-webkit-tap-highlight-color:transparent}
 #dm-pp::before{content:"\25B6\FE0E";font-size:13px;margin-left:2px}
 #dm-pp.dm-on::before{content:"\275A\275A";font-size:12px;margin-left:0;letter-spacing:-.15em}
@@ -67,11 +82,9 @@ body.dm-has-bar{padding-bottom:calc(66px + env(safe-area-inset-bottom,0px));back
 .dm-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 #dm-title{font-size:14px;font-weight:600;letter-spacing:.04em;color:#e6eef8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #dm-time{flex:none;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.06em;color:rgba(184,198,214,.75);font-variant-numeric:tabular-nums}
-#dm-seek{position:relative;height:20px;margin-top:2px;cursor:pointer;touch-action:none;outline:none}
-#dm-seek::before{content:"";position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;border-radius:3px;background:rgba(184,198,214,.18)}
-#dm-fill{position:absolute;left:0;top:50%;height:3px;width:0;margin-top:-1.5px;border-radius:3px;background:#6ee5ff;box-shadow:0 0 8px rgba(110,229,255,.7)}
-#dm-fill::after{content:"";position:absolute;right:-5px;top:50%;width:10px;height:10px;margin-top:-5px;border-radius:50%;background:#e6f9ff;box-shadow:0 0 8px #6ee5ff}
-#dm-seek:focus-visible #dm-fill::after{outline:2px solid #ff7ad9;outline-offset:2px}
+#dm-seek{position:relative;height:24px;cursor:pointer;touch-action:none;outline:none}
+#dm-wave{display:block;width:100%;height:100%}
+#dm-seek:focus-visible{outline:2px solid #ff7ad9;outline-offset:1px;border-radius:6px}
 /* DUMUL glitch on tap */
 h1.display{position:relative;cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 h1.display::before,h1.display::after{content:attr(data-text);position:absolute;left:0;right:0;top:0;bottom:0;text-align:center;white-space:nowrap;pointer-events:none;opacity:0;text-shadow:none;mix-blend-mode:screen}
@@ -141,36 +154,72 @@ h1.display.dm-glitching::after{animation:dm-slice-b .65s steps(1,end)}
   bar.id='dm-bar';
   bar.setAttribute('role','region');
   bar.setAttribute('aria-label','Music player');
-  bar.innerHTML='<button id="dm-pp" type="button" aria-label="Play atau pause"></button>'+
+  bar.innerHTML='<button id="dm-prev" type="button" aria-label="Lagu sebelumnya"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M6 5h2.4v14H6zM20 5v14L9.6 12z"/></svg></button>'+
+    '<button id="dm-pp" type="button" aria-label="Play atau pause"></button>'+
+    '<button id="dm-next" type="button" aria-label="Lagu berikutnya"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M15.6 5H18v14h-2.4zM4 5v14l10.4-7z"/></svg></button>'+
     '<div class="dm-mid"><div class="dm-top"><span id="dm-title" class="display"></span><span id="dm-time">00:00 / --:--</span></div>'+
-    '<div id="dm-seek" role="slider" tabindex="0" aria-label="Posisi lagu"><div id="dm-fill"></div></div></div>';
+    '<div id="dm-seek" role="slider" tabindex="0" aria-label="Posisi lagu"><canvas id="dm-wave"></canvas></div></div>';
   document.body.appendChild(bar);
   var elPP=bar.querySelector('#dm-pp'),elTitle=bar.querySelector('#dm-title'),
-      elTime=bar.querySelector('#dm-time'),elSeek=bar.querySelector('#dm-seek'),elFill=bar.querySelector('#dm-fill');
-  var lastTime='',lastPct=-1,dragging=false;
+      elTime=bar.querySelector('#dm-time'),elSeek=bar.querySelector('#dm-seek'),elWave=bar.querySelector('#dm-wave');
+  var lastTime='',dragging=false,seekPct=0,seekAmp=0,PAD=8;
+  var wctx=elWave.getContext('2d');
+  var reduceMotion=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  /* seek bar bergelombang: bagian yang udah diputar "squiggly", sisanya lurus */
+  function drawSeek(now){
+    var w=elWave.clientWidth,h=elWave.clientHeight;
+    if(!w||!h)return;
+    var dpr=Math.min(window.devicePixelRatio||1,2);
+    if(elWave.width!==Math.round(w*dpr)||elWave.height!==Math.round(h*dpr)){elWave.width=Math.round(w*dpr);elWave.height=Math.round(h*dpr);}
+    wctx.setTransform(dpr,0,0,dpr,0,0);
+    wctx.clearRect(0,0,w,h);
+    var y=h/2,x0=PAD,x1=w-PAD,xe=x0+(x1-x0)*seekPct/100;
+    wctx.lineCap='round';wctx.lineJoin='round';
+    wctx.beginPath();wctx.moveTo(xe,y);wctx.lineTo(x1,y);
+    wctx.strokeStyle='rgba(184,198,214,.22)';wctx.lineWidth=3;wctx.stroke();
+    var amp=3.4*seekAmp,k=2*Math.PI/20,ph=reduceMotion?0:(now||performance.now())/1000*7;
+    wctx.beginPath();wctx.moveTo(x0,y);
+    for(var x=x0;x<=xe;x+=1.5){
+      var tp=Math.min(1,(x-x0)/12,(xe-x)/12);
+      wctx.lineTo(x,y+Math.sin(k*(x-x0)-ph)*amp*Math.max(0,tp));
+    }
+    wctx.lineTo(xe,y);
+    wctx.strokeStyle='#6ee5ff';wctx.lineWidth=3;wctx.shadowColor='rgba(110,229,255,.75)';wctx.shadowBlur=8;wctx.stroke();
+    wctx.beginPath();wctx.arc(xe,y,5.5,0,Math.PI*2);
+    wctx.fillStyle='#e6f9ff';wctx.fill();wctx.shadowBlur=0;
+  }
   function uiStep(){
     if(!current)return;
     var t=audio.currentTime,d=audio.duration;
     var txt=fmt(t)+' / '+fmt(d);
     if(txt!==lastTime){lastTime=txt;elTime.textContent=txt;}
     var pct=(isFinite(d)&&d>0)?Math.min(100,t/d*100):0;
-    if(Math.abs(pct-lastPct)>.05){lastPct=pct;elFill.style.width=pct.toFixed(2)+'%';}
+    if(Math.abs(pct-seekPct)>.02){seekPct=pct;if(!raf)drawSeek();}
   }
   function showBar(){
     bar.classList.add('dm-show');document.body.classList.add('dm-has-bar');
     elTitle.textContent=current?titleOf(current):'';
-    lastTime='';lastPct=-1;uiStep();
+    lastTime='';seekPct=0;uiStep();drawSeek();
   }
   function hideBar(){bar.classList.remove('dm-show');document.body.classList.remove('dm-has-bar');}
   function setPP(on){elPP.classList.toggle('dm-on',on);}
   function seekFromEvent(e){
     var d=audio.duration;if(!isFinite(d)||!d)return;
     var r=elSeek.getBoundingClientRect();
-    var p=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));
+    var p=Math.min(1,Math.max(0,(e.clientX-r.left-PAD)/(r.width-2*PAD)));
     audio.currentTime=p*d;uiStep();
   }
   elPP.addEventListener('click',function(){if(current)toggle(current);});
+  function go(delta){
+    var list=rows(),i=list.indexOf(current),t=list[i+delta];
+    ensureGraph();
+    if(delta<0&&audio.currentTime>3){audio.currentTime=0;return;}
+    if(!t)return;
+    current=t;audio.src=srcOf(t);safePlay();
+  }
+  bar.querySelector('#dm-prev').addEventListener('click',function(){if(current)go(-1);});
+  bar.querySelector('#dm-next').addEventListener('click',function(){if(current)go(1);});
   elSeek.addEventListener('pointerdown',function(e){
     dragging=true;try{elSeek.setPointerCapture(e.pointerId);}catch(x){}
     seekFromEvent(e);
@@ -279,6 +328,14 @@ h1.display.dm-glitching::after{animation:dm-slice-b .65s steps(1,end)}
     st.panel.scrollTop=0;
     st.panel.classList.add('dm-open');
   }
+  function ensureVisible(panel){
+    /* panel lirik dipas-in supaya nggak ketutup player bawah; kalau kurang, halaman digeser sedikit */
+    var limit=window.innerHeight-(bar.offsetHeight||66)-10;
+    var top=panel.getBoundingClientRect().top;
+    panel.style.maxHeight=Math.max(110,Math.min(210,limit-top))+'px';
+    var r=panel.getBoundingClientRect();
+    if(r.bottom>limit)window.scrollBy({top:r.bottom-limit,behavior:'smooth'});
+  }
   function closeLyrics(){
     var o=document.querySelectorAll('.dm-lyrics.dm-open');
     for(var i=0;i<o.length;i++)o[i].classList.remove('dm-open');
@@ -311,7 +368,9 @@ h1.display.dm-glitching::after{animation:dm-slice-b .65s steps(1,end)}
     mix=Math.max(0,Math.min(1,mix));
     A.level=level*mix;
     if(playing){lyricsStep();uiStep();}
-    if(playing||mix>.001)raf=requestAnimationFrame(loop);
+    seekAmp+=((playing?1:0)-seekAmp)*.12;
+    drawSeek(now);
+    if(playing||mix>.001||seekAmp>.01)raf=requestAnimationFrame(loop);
   }
   function kick(){if(!raf)raf=requestAnimationFrame(loop);}
 
@@ -330,7 +389,9 @@ h1.display.dm-glitching::after{animation:dm-slice-b .65s steps(1,end)}
   audio.addEventListener('play',function(){
     clear();
     if(current){current.classList.add('dm-playing');showLyrics(current);}
-    showBar();setPP(true);kick();
+    showBar();setPP(true);
+    if(active)ensureVisible(active.panel);
+    kick();
   });
   audio.addEventListener('pause',function(){
     setPP(false);
