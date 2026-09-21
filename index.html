@@ -46,19 +46,32 @@ Error generating stack: `+o.message+`
 [class*="space-y-[1px]"] > div:hover span.display::before{opacity:.9}
 [class*="space-y-[1px]"] > div.dm-playing span.display{color:#6ee5ff}
 [class*="space-y-[1px]"] > div.dm-playing span.display::before{content:"\275A\275A";opacity:1;letter-spacing:-.15em}
+.dm-lyrics{display:none;position:relative;max-height:210px;overflow-y:auto;margin:0;padding:16px 8px 22px 1.6rem;scrollbar-width:none;-webkit-mask-image:linear-gradient(transparent 0,#000 12%,#000 88%,transparent 100%);mask-image:linear-gradient(transparent 0,#000 12%,#000 88%,transparent 100%)}
+.dm-lyrics::-webkit-scrollbar{display:none}
+.dm-lyrics.dm-open{display:block}
+.dm-line{margin:0;padding:3px 0;font-size:15px;line-height:1.7;color:rgba(214,228,240,.75);transition:color .25s}
+.dm-sync .dm-line{color:rgba(214,228,240,.3)}
+.dm-sync .dm-line[data-t]{cursor:pointer}
+.dm-sync .dm-line.on{color:#6ee5ff}
+.dm-line.dm-gap{display:none}
+.dm-line.dm-space{height:.9em;padding:0}
 #dm-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:50;max-width:90vw;padding:10px 16px;border-radius:999px;background:rgba(18,29,38,.95);border:1px solid rgba(110,229,255,.25);color:#e6eef8;font-size:12px;letter-spacing:.05em}
 </style>
 <script>
 (function(){
+  /* Lirik per lagu. Kunci = judul lagu huruf kecil. Format sinkron: [menit:detik.pecahan] teks baris */
+  var LYRICS={"limerence": "[ti:Limerence]\n[ar:Dumul]\n[al:Limerence]\n[00:30.00] Cinta yang kurasa\n[00:34.00] terlanjur sudah\n[00:37.00] tak bisa kulepas\n[00:44.00] maafkanlah\n[00:46.00] jika\n[00:48.00] aku telah memaksa\n[00:51.00] kau terima\n[00:56.00] aku\n[01:02.00] maafkan\n[01:03.00] aku\n[01:06.00] tak bisa\n[01:10.00] berhenti\n[01:13.00] mencintaimu\n[01:16.00] salahkan aku\n[01:21.00] andainya\n[01:24.00] kau terluka\n[01:26.00] karena diriku\n[01:31.00] tak bisakah\n[01:34.00] kau mengerti\n[01:57.00] maafkanlah\n[01:59.00] jika\n[02:01.00] aku telah memaksa\n[02:04.00] kau terima\n[02:09.00] aku\n[02:15.00] maafkan aku\n[02:20.00] tak bisa\n[02:23.00] berhenti\n[02:26.00] mencintaimu.\n[02:29.00] Salahkan\n[02:31.00] aku\n[02:34.00] andainya\n[02:37.00] kau terluka\n[02:40.00] karena diriku.\n[02:44.00] Tak bisakah\n[02:47.00] kau mengerti?\n[02:51.00] Tak bisakah\n[02:54.00] kau mengerti?\n[02:58.00] Aku... Oh...", "glitch": "[ti:Glitch]\n[ar:Dumul]\n[al:Limerence]\n[00:35.00] Kucoba tuk melupakanmu.\n[00:40.00] Hatiku\n[00:42.00] tak mampu.\n[00:46.00] Bayangmu selalu hantuiku.\n[00:51.00] Belenggu\n[00:53.00] langkahku.\n[01:02.00] Dalam gelapnya hati ini\n[01:07.00] tanpamu\n[01:10.00] kulari.\n[01:13.00] Pencar-i diriku hindari\n[01:18.00] sedihku\n[01:21.00] tak peduli.\n[01:30.00] Bersamamu\n[01:32.00] ku rasakan\n[01:35.00] walau semua duka lara.\n[01:40.00] Dan tanpamu\n[01:43.00] ku tak\n[01:45.00] bisa merasakan\n[01:49.00] arti cinta.\n[02:35.00] Bersamamu\n[02:38.00] kurasakan\n[02:41.00] walau semua duka lara.\n[02:46.00] Dan tanpamu\n[02:49.00] ku tak\n[02:50.00] bisa\n[02:51.00] merasakan\n[02:54.00] arti cinta.\n[02:57.00] Bersamamu.\n[03:02.00] Ku Tanpamu.\n[03:08.00] Bersamamu.\n[03:13.00] Ku Tanpamu.", "nastenka": "[ti:Nastenka]\n[ar:Dumul]\n[al:Limerence]\n[00:28.00] Kusadari\n[00:33.00] jika aku ini\n[00:39.00] bukan terbaik,\n[00:41.00] bukan terindah\n[00:44.00] untuk dirimu.\n[00:49.00] Kupahami\n[00:55.00] isi\n[00:56.00] hatimu\n[01:00.00] yang tak bisa\n[01:02.00] menerima cintaku\n[01:05.00] kepadamu.\n[01:11.00] Jangan ragu\n[01:16.00] tuk ungkapkan isi hatimu.\n[01:21.00] Jangan takut\n[01:26.00] jika aku terluka.\n[01:33.00] Dalam hati aku menangis\n[01:38.00] ketika ku tahu\n[01:41.00] kau tak memilihku.\n[01:43.00] Dalam hati aku kecewa\n[01:49.00] ketika ku sadar\n[01:51.00] cintamu bukan untukku.\n[02:28.00] Dalam hati aku menangis\n[02:34.00] ketika ku tahu\n[02:36.00] kau tak memilihku.\n[02:39.00] Dalam\n[02:40.00] hati aku kecewa\n[02:44.00] ketika ku sadar cintamu bukan\n[02:49.00] untukku.\n[02:57.00] Cintamu bukan untukku.\n[03:07.00] Cintamu\n[03:09.00] bukan untukku.", "larung": "[ti:Larung]\n[ar:Dumul]\n[al:Limerence]\n[00:18.00] Jangan lagi\n[00:22.00] kau bohongi\n[00:25.00] perasaanmu.\n[00:32.00] Jangan lagi\n[00:36.00] kau paksakan\n[00:39.00] hadirmu\n[00:47.00] tuk diriku.\n[00:53.00] Ku tahu kau mencintai\n[00:57.00] dia.\n[01:00.00] Sudahi semua.\n[01:08.00] Maafkan aku.\n[01:15.00] Takkan lagi\n[01:18.00] ku paksakan\n[01:22.00] hatiku.\n[01:28.00] Dan takkan lagi\n[01:32.00] ku mencoba\n[01:35.00] mengharapkanmu.\n[01:42.00] Untuk diriku\n[01:49.00] sepenuhnya\n[01:51.00] kau cintai\n[01:53.00] dia.\n[01:56.00] Sudahi\n[01:57.00] semua.\n[02:04.00] Lupakan aku.\n[02:08.00] Ku tahu kau tak pernah\n[02:12.00] bisa.\n[02:17.00] mencintaiku.\n[02:22.00] Ku tahu hatimu hanyalah\n[02:32.00] untuk dirinya,\n[02:38.00] bukan diriku.\n[02:45.00] Ku tahu kau mencintai\n[02:49.00] dia.\n[02:52.00] Sudahi semua.\n[03:00.00] Lupakan\n[03:01.00] aku.\n[03:32.00] Ku tahu kau tak pernah\n[03:36.00] bisa\n[03:39.00] mencintaiku.\n[03:47.00] Ku tahu hatimu hanyalah\n[03:56.00] untuk dirinya,\n[04:02.00] bukan diriku.\n[04:09.00] Sepenuhnya\n[04:11.00] kau cintai\n[04:13.00] dia.\n[04:17.00] Sudahi saja.\n[04:24.00] Lupakan\n[04:25.00] semua."};
+
   var SEL='[class*="space-y-[1px]"] > div';
   var audio=new Audio();
   audio.preload='none';
-  var current=null;
+  var HOLD=10; /* detik: highlight mati kalau baris berikutnya belum datang */
+  var current=null,active=null,lastIdx=-2,userScroll=0,raf=0;
 
   function rows(){return Array.prototype.slice.call(document.querySelectorAll(SEL));}
   function titleOf(r){var s=r.querySelector('span.display');return s?s.textContent.trim():'';}
-  function srcOf(r){return titleOf(r).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')+'.mp3';}
-  function clear(){rows().forEach(function(r){r.classList.remove('dm-playing');});}
+  function slugOf(r){return titleOf(r).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');}
+  function srcOf(r){return slugOf(r)+'.mp3';}
   function toast(msg){
     var t=document.getElementById('dm-toast');
     if(!t){t=document.createElement('div');t.id='dm-toast';document.body.appendChild(t);}
@@ -66,13 +79,107 @@ Error generating stack: `+o.message+`
     clearTimeout(t._h);t._h=setTimeout(function(){t.style.display='none';},3500);
   }
   function safePlay(){var p=audio.play();if(p&&p.catch)p.catch(function(){});}
+
+  /* ---------- lirik ---------- */
+  function parseLrc(txt){
+    var out=[],plain=[],re=/^\s*((?:\[\d+:\d+(?:[.:]\d+)?\])+)\s*(.*)$/;
+    String(txt||'').split(/\r?\n/).forEach(function(line){
+      var m=re.exec(line);
+      if(m){
+        var text=m[2].trim();
+        (m[1].match(/\[\d+:\d+(?:[.:]\d+)?\]/g)||[]).forEach(function(tag){
+          var p=/\[(\d+):(\d+(?:[.:]\d+)?)\]/.exec(tag);
+          out.push({t:(+p[1])*60+parseFloat(p[2].replace(':','.')),text:text});
+        });
+      }else if(!/^\s*\[[a-z]+:/i.test(line)){
+        plain.push(line.trim());
+      }
+    });
+    if(out.length){out.sort(function(a,b){return a.t-b.t;});return{synced:true,lines:out};}
+    while(plain.length&&!plain[0])plain.shift();
+    while(plain.length&&!plain[plain.length-1])plain.pop();
+    return{synced:false,lines:plain.map(function(s){return{t:0,text:s};})};
+  }
+  function buildPanel(row,data){
+    var sec=document.createElement('section');
+    sec.className='dm-lyrics'+(data.synced?' dm-sync':'');
+    sec.setAttribute('aria-label','Lyrics');
+    data.lines.forEach(function(l){
+      var p=document.createElement('p');
+      p.className='dm-line'+(l.text?'':(data.synced?' dm-gap':' dm-space'));
+      p.textContent=l.text;
+      if(data.synced)p.setAttribute('data-t',l.t);
+      sec.appendChild(p);
+    });
+    ['touchstart','wheel','mousedown'].forEach(function(ev){
+      sec.addEventListener(ev,function(){userScroll=Date.now()+3500;},{passive:true});
+    });
+    sec.addEventListener('click',function(e){
+      var p=e.target.closest('.dm-line[data-t]');
+      if(p&&!p.classList.contains('dm-gap')){
+        audio.currentTime=parseFloat(p.getAttribute('data-t'));
+        if(audio.paused)safePlay();
+      }
+    });
+    row.insertAdjacentElement('afterend',sec);
+    return sec;
+  }
+  function showLyrics(row){
+    var raw=LYRICS[slugOf(row)];
+    if(!raw||!String(raw).trim())return;
+    var st=row._dm;
+    if(!st){
+      var data=parseLrc(raw);
+      if(!data.lines.length)return;
+      st=row._dm={data:data,panel:buildPanel(row,data)};
+    }
+    active=st;lastIdx=-2;
+    Array.prototype.forEach.call(st.panel.children,function(n){n.classList.remove('on');});
+    st.panel.scrollTop=0;
+    st.panel.classList.add('dm-open');
+  }
+  function closeLyrics(){
+    var o=document.querySelectorAll('.dm-lyrics.dm-open');
+    for(var i=0;i<o.length;i++)o[i].classList.remove('dm-open');
+    active=null;
+  }
+  function tick(){
+    cancelAnimationFrame(raf);
+    if(!active||audio.paused)return;
+    if(active.data.synced){
+      var t=audio.currentTime,L=active.data.lines,idx=-1;
+      for(var i=0;i<L.length;i++){if(L[i].t<=t)idx=i;else break;}
+      if(idx>-1&&t-L[idx].t>HOLD)idx=-1;
+      if(idx!==lastIdx){
+        lastIdx=idx;
+        var kids=active.panel.children;
+        for(var j=0;j<kids.length;j++)kids[j].classList.toggle('on',j===idx&&!!L[j].text);
+        var el=kids[idx];
+        if(el&&L[idx].text&&Date.now()>userScroll){
+          var pn=active.panel;
+          pn.scrollTo({top:Math.max(0,el.offsetTop-pn.clientHeight/2+el.offsetHeight/2),behavior:'smooth'});
+        }
+      }
+    }
+    raf=requestAnimationFrame(tick);
+  }
+
+  /* ---------- player ---------- */
+  function clear(){
+    rows().forEach(function(r){r.classList.remove('dm-playing');});
+    closeLyrics();
+  }
   function toggle(r){
     if(current===r&&!audio.paused){audio.pause();return;}
     if(current!==r){current=r;audio.src=srcOf(r);}
     safePlay();
   }
 
-  audio.addEventListener('play',function(){clear();if(current)current.classList.add('dm-playing');});
+  audio.addEventListener('play',function(){
+    clear();
+    if(current){current.classList.add('dm-playing');showLyrics(current);}
+    cancelAnimationFrame(raf);raf=requestAnimationFrame(tick);
+  });
   audio.addEventListener('pause',function(){if(!audio.ended)clear();});
   audio.addEventListener('ended',function(){
     clear();
