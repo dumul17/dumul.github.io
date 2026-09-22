@@ -302,32 +302,84 @@ function updateAudioViz(now){
     AV.peak+=(AV.bass-AV.peak)*.10;
   }catch(e){AV.fallback=true;AV.ready=false;}
 }
+/* Dense, audio-reactive ripple rings around Gargantua, built for phones:
+   - the expensive part (reading the spectrum, walking the circle) runs ONCE
+     into a small shared point profile, reused by every ring that needs it.
+   - most of the "density" comes from cheap plain g.arc() rings (a single
+     native path op each) whose radius/alpha simply ride the smoothed level
+     and beat values already computed in updateAudioViz - no per-vertex work.
+   - the shared profile itself is only recomputed every other frame (synced
+     to AV.skip, the same cadence the analyser already samples at); audio
+     motion is far slower than 60fps so this is invisible but roughly halves
+     the per-vertex cost. */
+var AVP={pts:null,N:28,stamp:-1};
+function buildAVProfile(now){
+  var N=AVP.N,pts=AVP.pts;
+  if(!pts||pts.length!==(N+1)*3){pts=AVP.pts=new Float32Array((N+1)*3);}
+  var data=AV.data,n=data?data.length:0,b=AV.bass,m=AV.mid,h=AV.high;
+  for(var j=0;j<=N;j++){
+    var u=j/N,ang=u*6.283,fv;
+    if(n){var uu=Math.abs(u-.5)*2;var bi=1+Math.min(119,n-2,(uu*uu*118)|0);fv=data[bi]/255;}
+    else fv=.45*b+.35*m+.20*h;
+    var wave=.022*Math.sin(ang*3+now*.0018);
+    pts[j*3]=Math.cos(ang);pts[j*3+1]=Math.sin(ang);pts[j*3+2]=fv*(1+wave);
+  }
+  AVP.stamp=AV.skip;
+}
+function strokeReactiveRing(R,base,spread,lv,beat,glitch,rgb,alpha,width){
+  var pts=AVP.pts,N=AVP.N;
+  g.strokeStyle='rgba('+rgb+','+alpha+')';g.lineWidth=Math.max(.7,width);
+  g.beginPath();
+  for(var j=0;j<=N;j++){
+    var fv=pts[j*3+2],amp=R*(.018+.045*lv+.095*fv+spread);
+    var rr=R*base+amp;
+    if(beat>.35)rr+=R*.05*beat;
+    if(glitch&&j%7===0)rr+=(Math.random()-.5)*R*.14;
+    var x=pts[j*3]*rr,y=pts[j*3+1]*rr;
+    if(j===0)g.moveTo(x,y);else g.lineTo(x,y);
+  }
+  g.closePath();g.stroke();
+}
+/* Every "density" ring below reuses the SAME cached point profile (no new
+   sin/cos/pow at all - just a few multiplies per vertex), so going from 2
+   rings to a dozen costs almost nothing extra per frame. This is what makes
+   the moire look from the reference image affordable on a phone. */
+function strokeCheapRing(R,base,growth,lv,beat,rgb,alpha,width){
+  var pts=AVP.pts,N=AVP.N;
+  g.strokeStyle='rgba('+rgb+','+alpha+')';g.lineWidth=width;
+  g.beginPath();
+  for(var j=0;j<=N;j++){
+    var rr=R*base+pts[j*3+2]*growth;
+    var x=pts[j*3]*rr,y=pts[j*3+1]*rr;
+    if(j===0)g.moveTo(x,y);else g.lineTo(x,y);
+  }
+  g.closePath();g.stroke();
+}
 function drawAudioVisualizer(now,R){
   if(reduce||!activeSfx||activeSfx.paused||activeSfx.ended)return;
   try{
     var beat=AV.beat,lv=AV.level,b=AV.bass,m=AV.mid,h=AV.high;
-    var data=AV.data,n=data?data.length:0,N=40,glitch=now<AV.glitchUntil;
+    var glitch=now<AV.glitchUntil;
+    if(AVP.stamp!==AV.skip)buildAVProfile(now);
     g.save();g.globalCompositeOperation='lighter';
-    for(var layer=0;layer<2;layer++){
-      var rgb=layer===0?'110,229,255':'255,70,215';
-      g.strokeStyle='rgba('+rgb+','+(.24+.22*lv+.20*beat)+')';
-      g.lineWidth=Math.max(.7,R*(layer?0.012:0.017));
-      g.beginPath();
-      for(var j=0;j<=N;j++){
-        var u=j/N,ang=u*6.283;
-        var fv;
-        if(n){var bi=1+Math.min(119,n-2,Math.floor(Math.pow(Math.abs(u-.5)*2,1.55)*118));fv=data[bi]/255;}
-        else fv=.45*b+.35*m+.20*h;
-        var wave=.018*Math.sin(ang*3+now*.0018)+.012*Math.sin(ang*7-now*.0011);
-        var amp=R*(.018+.045*lv+.095*fv+.10*b+.055*m+.025*h);
-        var rr=R*(1.065+layer*.075)+amp*(1+wave);
-        if(beat>.35)rr+=R*.055*beat*Math.sin(ang*2+now*.003);
-        if(glitch&&j%9===0)rr+=(Math.random()-.5)*R*.16;
-        var x=Math.cos(ang)*rr,y=Math.sin(ang)*rr;
-        if(j===0)g.moveTo(x,y);else g.lineTo(x,y);
-      }
-      g.closePath();g.stroke();
+
+    /* Dense moire field: a dozen rings sharing one cached profile, so this
+       costs almost nothing beyond the two hero rings below - just what
+       makes it read as "dense" like the reference photo. Cyan and pink
+       alternate and interleave, same as the reference's colour blend. */
+    var DENSE=11;
+    for(var d=0;d<DENSE;d++){
+      var dp=d/(DENSE-1),pink=d%2===1;
+      var base=1.10+dp*1.9,growth=R*(.05+.16*dp+.12*lv+.10*beat);
+      var alpha=(1-dp*.72)*(.10+.09*lv+.10*beat);
+      strokeCheapRing(R,base,growth,lv,beat,pink?'255,70,215':'110,229,255',alpha,Math.max(.5,R*.007));
     }
+
+    /* Two "hero" rings actually shaped by the live spectrum, drawn brightest
+       and closest to the horizon so the density above reads as depth. */
+    strokeReactiveRing(R,1.065,.10+.055*m+.025*h,lv,beat,glitch,'110,229,255',.30+.26*lv+.22*beat,R*.019);
+    strokeReactiveRing(R,1.14,.075+.04*m,lv,beat,glitch,'255,70,215',.26+.20*lv+.18*beat,R*.014);
+
     if(beat>.15){
       var sr=R*(1.06+.13*beat);
       g.strokeStyle='rgba(235,245,255,'+(.08+.20*beat)+')';
@@ -336,9 +388,9 @@ function drawAudioVisualizer(now,R){
     }
     if(glitch){
       for(var q=0;q<3;q++){
-        var a=(Math.random()*2-1)*Math.PI,d=R*(1.08+Math.random()*1.05),len=R*(.25+Math.random()*.7);
+        var a=(Math.random()*2-1)*Math.PI,dd=R*(1.08+Math.random()*1.05),len=R*(.25+Math.random()*.7);
         g.strokeStyle=q===1?'rgba(110,229,255,.24)':'rgba(255,70,215,.20)';
-        g.lineWidth=.7;g.beginPath();g.moveTo(Math.cos(a)*d,Math.sin(a)*d);g.lineTo(Math.cos(a)*(d+len),Math.sin(a)*(d+len));g.stroke();
+        g.lineWidth=.7;g.beginPath();g.moveTo(Math.cos(a)*dd,Math.sin(a)*dd);g.lineTo(Math.cos(a)*(dd+len),Math.sin(a)*(dd+len));g.stroke();
       }
     }
     g.restore();
