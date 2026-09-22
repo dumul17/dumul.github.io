@@ -78,7 +78,7 @@ footer nav svg{width:20px;height:20px;display:block}
 #veil.on{opacity:1}
 body.sw{pointer-events:none}
 
-/* ---------- v4 interaction layer ---------- */
+/* ---------- v4 interaction layer ---------- | v25 mobile canvas compatibility */
 #owl-source{position:fixed;right:14px;top:calc(14px + env(safe-area-inset-top,0px));z-index:6;width:34px;height:34px;display:grid;place-items:center;color:rgba(184,198,214,.46);text-decoration:none;border:1px solid rgba(110,229,255,.12);border-radius:50%;background:rgba(6,11,17,.32);backdrop-filter:blur(4px);transition:color .2s,border-color .2s,transform .2s,box-shadow .2s}
 #owl-source:hover,#owl-source:focus-visible{color:#6ee5ff;border-color:rgba(110,229,255,.55);box-shadow:0 0 16px rgba(110,229,255,.16);transform:translateY(-1px)}
 #owl-source svg{width:19px;height:19px}
@@ -550,6 +550,38 @@ function buildSprite(){                   /* layered gravitational lens: luminou
   BH.sprite=c;BH.S=S;
 }
 
+function drawHoleFallback(now,age){
+  /* Compatibility fallback for older/mobile canvas engines.  If the layered
+     sprite cannot be drawn, keep Gargantua visible with only basic Canvas 2D
+     primitives so one unsupported effect cannot make the whole scene vanish. */
+  var a=clamp((age-.9)/1.5),sc=1-Math.pow(1-a,3),e=SW?ease(swP):0;
+  var R=Math.max(.1,BH.R*sc*(1+1.6*e));
+  if(R<.5)return;
+  g.save();g.translate(BH.x,BH.y);
+  g.globalCompositeOperation='source-over';
+  /* accretion disk */
+  g.save();g.rotate(-.48);
+  g.fillStyle='rgba(120,165,215,.16)';g.beginPath();g.ellipse(0,0,R*4.8,R*.13,0,0,6.283);g.fill();
+  g.fillStyle='rgba(240,235,230,.52)';g.beginPath();g.ellipse(0,0,R*4.1,R*.045,0,0,6.283);g.fill();
+  g.restore();
+  /* luminous lens rings */
+  g.strokeStyle='rgba(150,190,225,.32)';g.lineWidth=Math.max(1,R*.18);g.beginPath();g.arc(0,0,R*1.25,0,6.283);g.stroke();
+  g.strokeStyle='rgba(235,243,248,.78)';g.lineWidth=Math.max(1,R*.075);g.beginPath();g.arc(0,0,R*1.08,0,6.283);g.stroke();
+  /* event horizon */
+  g.fillStyle='#000102';g.beginPath();g.arc(0,0,R,0,6.283);g.fill();
+  g.strokeStyle='rgba(255,255,252,.95)';g.lineWidth=Math.max(1,R*.055);g.beginPath();g.arc(0,0,R*1.025,0,6.283);g.stroke();
+  g.restore();
+}
+function drawHoleSafe(now,age){
+  try{
+    drawHole(now,age);
+    /* Some older engines fail silently around offscreen canvas sprites. */
+    if(!BH.sprite || !BH.Rr)drawHoleFallback(now,age);
+  }catch(err){
+    window.__hub.renderError='drawHole: '+(err&&err.message||err);
+    drawHoleFallback(now,age);
+  }
+}
 function drawHole(now,age){
   var a=clamp((age-.9)/1.5),sc=1-Math.pow(1-a,3),e=SW?ease(swP):0;
   BH.Rr=BH.R*sc*(1+1.6*e);
@@ -1211,9 +1243,11 @@ function frame(now){
   drawSecretStar(now,age);
   drawTriggerVisuals(now);
   drawSupernovaBursts(now);
-  drawAsteroids(now);
-  drawPortals(age,now);
-  drawHole(now,age);
+  /* Isolate late-stage canvas effects so one mobile/WebView compatibility
+     issue cannot abort the frame before Gargantua is rendered. */
+  try{drawAsteroids(now);}catch(err){window.__hub.renderError='drawAsteroids: '+(err&&err.message||err);}
+  try{drawPortals(age,now);}catch(err){window.__hub.renderError='drawPortals: '+(err&&err.message||err);}
+  drawHoleSafe(now,age);
   requestAnimationFrame(frame);
 }
 
