@@ -89,7 +89,7 @@ body.sw{pointer-events:none}
 #terminal .term-title{color:#eaf6ff;letter-spacing:.14em}
 #terminal .cursor{display:inline-block;width:7px;height:12px;background:#6ee5ff;vertical-align:-2px;animation:blink .8s steps(1,end) infinite}
 @keyframes blink{50%{opacity:0}}
-.supernova-flash{position:fixed;inset:0;z-index:7;pointer-events:none;background:radial-gradient(circle at var(--sx) var(--sy),rgba(255,245,210,.98) 0,rgba(255,100,50,.68) 4%,rgba(255,45,35,.2) 13%,transparent 42%);opacity:0}
+.supernova-flash{position:fixed;inset:0;z-index:7;pointer-events:none;background:radial-gradient(circle at var(--sx) var(--sy),rgba(255,255,255,.98) 0,rgba(var(--sn-rgb),.82) 4%,rgba(var(--sn-rgb),.24) 13%,transparent 42%);opacity:0}
 .supernova-flash.on{animation:snflash .85s ease-out forwards}
 @keyframes snflash{0%{opacity:0}12%{opacity:1}30%{opacity:.78}100%{opacity:0}}
 body.konami #sky{filter:none}
@@ -104,11 +104,15 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 @media (max-width:600px){
   #owl-source{right:10px;width:31px;height:31px}
   #terminal{bottom:68px;font-size:10px}
+  /* Keep the transient Konami override inside narrow phone viewports.
+     The desktop minimum font-size (15px) plus wide letter-spacing can make
+     this one-line message exceed a 360px screen. */
+  #secret-msg{left:8px;right:8px;width:auto;max-width:none;transform:translateY(-50%);font-size:clamp(8px,2.8vw,14px);letter-spacing:.08em;padding:8px 8px;overflow:hidden;white-space:nowrap;text-align:center}
 }
 
 @media (prefers-reduced-motion:reduce){h1.gl .big,h1.gl .kicker{animation-duration:.01s}}
 </style>
-<meta name="gimmick-revision" content="v22: varied distant galaxies + unified trigger pulse">
+<meta name="gimmick-revision" content="v24: mobile Konami banner viewport fix + unified multicolor supernova triggers">
 </head>
 <body>
 <canvas id="sky" aria-hidden="true"></canvas>
@@ -164,6 +168,12 @@ function mkAudio(name,vol,loop){var a=new Audio(encodeURIComponent(name));a.prel
 function safePlay(a){var p=a.play();if(p&&p.catch)p.catch(function(){});}
 function haptic(ms){
   if(navigator.vibrate)try{navigator.vibrate(ms||10);}catch(e){}
+}
+function showSecret(text,ms){
+  var el=$('#secret-msg');if(!el)return;
+  clearTimeout(el._t);clearTimeout(el._type);
+  el.textContent=text;el.classList.add('on');
+  el._t=setTimeout(function(){el.classList.remove('on');},ms||2000);
 }
 function showSecretSequence(){
   var el=$('#secret-msg');if(!el)return;
@@ -223,7 +233,7 @@ function playSfx(a){
     }
   };
 }
-var BH={x:0,y:0,R:26,Rr:0,h:0,sprite:null,S:0};
+var BH={x:0,y:0,hx:0,hy:0,R:26,Rr:0,h:0,sprite:null,S:0};
 function clamp(v){return v<0?0:v>1?1:v;}
 function rgb(hex){var n=parseInt(hex.slice(1),16);return((n>>16)&255)+','+((n>>8)&255)+','+(n&255);}
 
@@ -307,7 +317,7 @@ PORTALS.forEach(function(p){
   var h=document.createElement('a');h.className='hit';h.tabIndex=-1;h.setAttribute('aria-hidden','true');
   if(p.id==='yt'){
     h.href='#';h.setAttribute('aria-label','Putar suara Spica');
-    h.addEventListener('click',function(e){e.preventDefault();haptic(10);playSfx(SFX.spica);});
+    h.addEventListener('click',function(e){e.preventDefault();if(!SW)triggerSupernova('spica');});
     h.addEventListener('mouseenter',function(){hot='spica';a.classList.add('hot');});
     h.addEventListener('mouseleave',function(){if(hot==='spica')hot=null;a.classList.remove('hot');});
     h.addEventListener('focus',function(){hot='spica';});
@@ -365,7 +375,8 @@ function layout(){
   CAPS.orion.style.transform='translate('+Math.round((o.minX+o.maxX)/2-30)+'px,'+Math.round(o.maxY+22)+'px)';
   CAPS.virgo.style.transform='translate('+Math.round(v.maxX-42)+'px,'+Math.round(v.minY-24)+'px)';
   BH.R=portrait?Math.min(30,W*.075):Math.min(38,ah*.075);
-  BH.x=W*.5;BH.y=portrait?top+ah*.48:top+ah*.27;
+  BH.hx=W*.5;BH.hy=portrait?top+ah*.48:top+ah*.27;
+  if(!drag.on){BH.x=BH.hx;BH.y=BH.hy;}
   var bhEl=$('#bh');bhEl.style.width=Math.round(BH.R*16)+'px';bhEl.style.height=Math.round(BH.R*10)+'px';
   bhEl.style.transform='translate('+Math.round(BH.x-BH.R*8)+'px,'+Math.round(BH.y-BH.R*5)+'px)';
   CAPS.bh.style.transform='translate('+Math.round(BH.x-CAPS.bh.offsetWidth/2+3)+'px,'+Math.round(BH.y+BH.R*1.7)+'px)';
@@ -1121,11 +1132,18 @@ function drawPulses(now,age){
   for(var i=PU.length-1;i>=0;i--){
     var p=PU[i],u=(now-p.t)/p.d;if(u>1){PU.splice(i,1);continue;}
     if(p.shock){
-      var sb=p.c.stars.betel;
+      var sb=p.c.stars[p.snKey],tr=TRIGGERS[p.snKey];
+      if(!sb||!tr)continue;
       var base=gravityPos(sb.x+p.c.ox,sb.y+p.c.oy);
       if(!base||base[2]>=1)continue;
       var sx=base[0]+Math.cos(p.ang)*p.sp*u*(1-.35*base[2]),sy=base[1]+Math.sin(p.ang)*p.sp*u*(1-.35*base[2]);
-      g.fillStyle='rgba(255,96,55,'+(1-u)*.7*(1-.7*base[2])+')';g.beginPath();g.arc(sx,sy,1.2+2*u,0,6.283);g.fill();continue;
+      var sa=(1-u)*.72*(1-.7*base[2]);
+      g.fillStyle='rgba('+tr.rgb+','+sa+')';g.beginPath();g.arc(sx,sy,1.2+2.2*u,0,6.283);g.fill();
+      if((p.i||0)%3===0){
+        g.strokeStyle='rgba('+tr.rgb+','+(sa*.42)+')';g.lineWidth=.65;
+        g.beginPath();g.arc(base[0],base[1],sb.r*(2+7*u),0,6.283);g.stroke();
+      }
+      continue;
     }
     var A=p.c.stars[p.a],B=p.c.stars[p.b],ox=p.c.ox,oy=p.c.oy;
     function gp(t){return gravityPos(A.x+(B.x-A.x)*t+ox,A.y+(B.y-A.y)*t+oy);}
@@ -1180,6 +1198,9 @@ function frame(now){
   var age=reduce?99:(now-START)/1000;
   if(SW)swP=clamp((now-SW.t0)/SW.dur);
   mouse.x+=(mouse.tx-mouse.x)*.05;mouse.y+=(mouse.ty-mouse.y)*.05;
+  if(!drag.on&&(Math.abs(BH.x-BH.hx)>.05||Math.abs(BH.y-BH.hy)>.05)){
+    BH.x+=(BH.hx-BH.x)*.065;BH.y+=(BH.hy-BH.y)*.065;
+  }
   g.clearRect(0,0,W,H);
   drawDistantGalaxies(now);
   drawFloatingTelescope(now);
@@ -1189,24 +1210,54 @@ function frame(now){
   CONS.forEach(function(c){drawStars(c,age,now);});
   drawSecretStar(now,age);
   drawTriggerVisuals(now);
+  drawSupernovaBursts(now);
   drawAsteroids(now);
   drawPortals(age,now);
   drawHole(now,age);
   requestAnimationFrame(frame);
 }
 
-function triggerSupernova(){
+function triggerSupernova(key){
   if(SW)return;
-  playSfx(SFX.betel);haptic(20);
-  var s=cons('orion').stars.betel,flash=$('#sn-flash');
-  flash.style.setProperty('--sx',Math.round(s.x+cOrionOffsetX())+'px');
-  flash.style.setProperty('--sy',Math.round(s.y+cOrionOffsetY())+'px');
+  var tr=TRIGGERS[key],s=tr&&cons(tr.cons).stars[tr.star];
+  if(!tr||!s)return;
+  playSfx(SFX[key]);haptic(key==='betel'?20:18);
+  var c=cons(tr.cons),flash=$('#sn-flash'),q=gravityPos(s.x+c.ox,s.y+c.oy);
+  if(!q||q[2]>=1)return;
+  flash.style.setProperty('--sx',Math.round(q[0])+'px');
+  flash.style.setProperty('--sy',Math.round(q[1])+'px');
+  flash.style.setProperty('--sn-rgb',tr.rgb);
   flash.classList.remove('on');void flash.offsetWidth;flash.classList.add('on');
+
+  /* Same supernova language for all three trigger stars; only the color differs. */
   var t0=performance.now();
-  /* short-lived shockwave particles; core star remains */
-  for(var i=0;i<18;i++){
-    var a=Math.random()*6.283,sp=35+Math.random()*90;
-    PU.push({c:cons('orion'),a:'betel',b:'betel',t:t0,d:700,shock:true,ang:a,spd:sp});
+  for(var i=0;i<22;i++){
+    var a=Math.random()*6.283,sp=38+Math.random()*105;
+    PU.push({c:c,a:tr.star,b:tr.star,t:t0,d:760+Math.random()*180,shock:true,snKey:key,ang:a,sp:sp,i:i});
+  }
+  /* A short luminous core burst makes Rigel/Spica feel like the same event as Betelgeuse. */
+  SN_BURSTS.push({key:key,t:t0,d:760});
+}
+var SN_BURSTS=[];
+function drawSupernovaBursts(now){
+  if(!SN_BURSTS.length)return;
+  for(var i=SN_BURSTS.length-1;i>=0;i--){
+    var b=SN_BURSTS[i],u=(now-b.t)/b.d;
+    if(u>1){SN_BURSTS.splice(i,1);continue;}
+    var tr=TRIGGERS[b.key],c=cons(tr.cons),s=c.stars[tr.star],q=gravityPos(s.x+c.ox,s.y+c.oy);
+    if(!q||q[2]>=1)continue;
+    var fade=1-.85*q[2],easeOut=1-Math.pow(1-u,3),base=s.r*(2.5+9*easeOut);
+    g.save();g.globalCompositeOperation='lighter';
+    var rg=g.createRadialGradient(q[0],q[1],0,q[0],q[1],base*2.6);
+    rg.addColorStop(0,'rgba(255,255,255,'+(.82*(1-u)*fade)+')');
+    rg.addColorStop(.18,'rgba('+tr.rgb+','+(.48*(1-u)*fade)+')');
+    rg.addColorStop(1,'rgba('+tr.rgb+',0)');
+    g.fillStyle=rg;g.beginPath();g.arc(q[0],q[1],base*2.6,0,6.283);g.fill();
+    g.strokeStyle='rgba('+tr.rgb+','+(.72*(1-u)*fade)+')';g.lineWidth=1.15;
+    g.beginPath();g.arc(q[0],q[1],base,0,6.283);g.stroke();
+    g.strokeStyle='rgba(255,255,255,'+(.48*(1-u)*fade)+')';g.lineWidth=.8;
+    g.beginPath();g.moveTo(q[0]-base*1.8,q[1]);g.lineTo(q[0]+base*1.8,q[1]);g.moveTo(q[0],q[1]-base*1.8);g.lineTo(q[0],q[1]+base*1.8);g.stroke();
+    g.restore();
   }
 }
 function cOrionOffsetX(){return cons('orion').ox||0}
@@ -1244,9 +1295,9 @@ document.addEventListener('pointerdown',function(e){
   });
   if(hit){
     tapFlash={until:now+420,cons:hit.c.id};
-    if(hit.star==='betel'){haptic(20);triggerSupernova();}
-    else if(hit.star==='rigel'){haptic(10);playSfx(SFX.rigel);}
-    else if(hit.star==='spica'){haptic(10);playSfx(SFX.spica);}
+    if(hit.star==='betel'){triggerSupernova('betel');}
+    else if(hit.star==='rigel'){triggerSupernova('rigel');}
+    else if(hit.star==='spica'){triggerSupernova('spica');}
     else haptic(8);
   }
 },{passive:true});
@@ -1347,22 +1398,41 @@ document.addEventListener('pointercancel',endBHDrag,{passive:false});
 var rgFx=$('#rigel-fx');
 rgFx.addEventListener('mouseenter',function(){hot='rigel';});
 rgFx.addEventListener('mouseleave',function(){if(hot==='rigel')hot=null;});
-rgFx.addEventListener('click',function(){if(!SW){haptic(10);playSfx(SFX.rigel);}});
+rgFx.addEventListener('click',function(){if(!SW)triggerSupernova('rigel');});
 
 var btFx=$('#betel-fx');
 btFx.addEventListener('mouseenter',function(){hot='betel';});
 btFx.addEventListener('mouseleave',function(){if(hot==='betel')hot=null;});
-btFx.addEventListener('click',function(){if(!SW)triggerSupernova();});
+btFx.addEventListener('click',function(){if(!SW)triggerSupernova('betel');});
 
 /* ---------- easter eggs ---------- */
+function triggerKonami(){
+  document.body.classList.add('konami');haptic(18);
+  showSecret('SYSTEM OVERRIDE · DUMUL//CONSTELLATION',1400);
+  setTimeout(function(){document.body.classList.remove('konami');},1650);
+}
 window.addEventListener('keydown',function(e){
   konamiSeq.push(e.key);if(konamiSeq.length>konami.length)konamiSeq.shift();
-  if(konamiSeq.join('|')===konami.join('|')){
-    konamiSeq=[];document.body.classList.add('konami');haptic(18);
-    showSecret('SYSTEM OVERRIDE · DUMUL//CONSTELLATION',1400);
-    setTimeout(function(){document.body.classList.remove('konami');},1650);
-  }
+  if(konamiSeq.join('|')===konami.join('|')){konamiSeq=[];triggerKonami();}
 });
+/* Versi mobile: swipe panah (atas atas bawah bawah kiri kanan kiri kanan) mengisi
+   buffer yang sama, karena HP tidak punya tombol panah. Gesture yang sudah dipakai
+   Gargantua (drag) atau star/portal lain diabaikan supaya tidak bentrok. */
+var swipeStart=null;
+document.addEventListener('pointerdown',function(e){
+  if(drag.on||(e.target.closest&&e.target.closest('#rigel-fx,#betel-fx,.hit,.portal,#owl-source,#bh-clock,#bh')))return;
+  swipeStart={x:e.clientX,y:e.clientY,id:e.pointerId};
+},{passive:true});
+document.addEventListener('pointerup',function(e){
+  if(!swipeStart||e.pointerId!==swipeStart.id)return;
+  var dx=e.clientX-swipeStart.x,dy=e.clientY-swipeStart.y;swipeStart=null;
+  var adx=Math.abs(dx),ady=Math.abs(dy),travel=Math.max(adx,ady);
+  /* Mobile Konami = 8 deliberate flicks, not a continuous drag. */
+  if(travel<42 || Math.min(adx,ady)>travel*.72)return;
+  var dir=adx>ady?(dx>0?'ArrowRight':'ArrowLeft'):(dy>0?'ArrowDown':'ArrowUp');
+  konamiSeq.push(dir);if(konamiSeq.length>konami.length)konamiSeq.shift();
+  if(konamiSeq.join('|')===konami.join('|')){konamiSeq=[];triggerKonami();}
+},{passive:true});
 $('#bh-clock').addEventListener('pointerdown',function(e){
   e.stopPropagation();var now=performance.now();
   if(now-utcReset>2200)utcClicks=0;
