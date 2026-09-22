@@ -108,6 +108,7 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 
 @media (prefers-reduced-motion:reduce){h1.gl .big,h1.gl .kicker{animation-duration:.01s}}
 </style>
+<meta name="gimmick-revision" content="v22: varied distant galaxies + unified trigger pulse">
 </head>
 <body>
 <canvas id="sky" aria-hidden="true"></canvas>
@@ -332,7 +333,8 @@ function fitTitle(){
   while(rg.getBoundingClientRect().width>avail&&size>14&&n++<60){size-=1;big.style.fontSize=size+'px';}
 }
 /* ---------- layout ---------- */
-var BG=[],SS=[],PU=[],AST=[],nextSS=0,nextPU=0;
+var BG=[],SS=[],PU=[],AST=[],GAL=[],nextSS=0,nextPU=0;
+var TELESCOPE={phase:1.7,init:false,x:0,y:0,vx:0,vy:0,tx:0,ty:0,ang:0,va:0,next:0};
 function layout(){
   if(SW)return;
   W=innerWidth;H=innerHeight;DPR=Math.min(window.devicePixelRatio||1,2);
@@ -391,7 +393,20 @@ function layout(){
   var ac=Math.max(22,Math.min(42,Math.round(W*H/15000)));
   for(var j=0;j<ac;j++){
     var ang=Math.random()*Math.PI*2,rad=Math.min(W,H)*(.12+Math.random()*.22);
-    AST.push({a:ang,r:rad,e:.72+Math.random()*.28,spd:(.000045+Math.random()*.000075)*(Math.random()<.5?1:-1),sz:2.0+Math.random()*5.8,rot:Math.random()*6.28,rs:(Math.random()-.5)*.0018,al:.96+Math.random()*.04,seed:Math.random()*6.28});
+    AST.push({a:ang,r:rad,e:.72+Math.random()*.28,spd:(.000045+Math.random()*.000075)*(Math.random()<.5?1:-1),sz:2.0+Math.random()*5.8,rot:Math.random()*6.28,rs:(Math.random()-.5)*.0018,al:.96+Math.random()*.04,seed:Math.random()*6.28,ox:0,oy:0,vx:0,vy:0,kick:0,kickUntil:0,_lastNow:performance.now()});
+  }  if(!GAL.length){
+    var spots=[[.08,.18,.72,.18,1.0],[.84,.13,.42,.72,.8],[.18,.42,.58,.38,1.1],[.76,.47,.66,.32,.9],[.10,.72,.48,.22,.75],[.88,.78,.55,.55,1.15],[.48,.24,.34,.44,.65],[.54,.82,.72,.26,.9]];
+    var galCols=[
+      {core:'255,225,185',outer:'205,225,255',halo:'135,175,230'},
+      {core:'255,198,138',outer:'238,190,225',halo:'175,125,195'},
+      {core:'205,232,255',outer:'145,195,245',halo:'90,145,210'},
+      {core:'255,232,165',outer:'225,205,150',halo:'155,150,105'},
+      {core:'240,210,255',outer:'180,160,235',halo:'120,105,195'},
+      {core:'180,235,220',outer:'125,205,225',halo:'80,150,180'},
+      {core:'255,215,185',outer:'230,170,175',halo:'170,115,125'},
+      {core:'215,230,255',outer:'165,180,235',halo:'105,125,190'}
+    ];
+    GAL=spots.map(function(q,i){var cc=galCols[i%galCols.length];return{x:q[0],y:q[1],rx:q[2],ry:q[3],rot:(i*.83)%3.14,scale:q[4],p:i*.91,tw:.7+i*.06,col:cc};});
   }
 }
 
@@ -405,12 +420,37 @@ function pull(x,y){                       /* posisi benda saat disedot: berputar
   var r2=r*Math.pow(1-k,1.5),t2=th+k*3.4;
   return [BH.x+Math.cos(t2)*r2,BH.y+Math.sin(t2)*r2,k];
 }
-function lens(x,y){                       /* pembelokan cahaya bintang di sekitar lubang hitam */
+function lens(x,y){                       /* smooth gravitational lens: bounded, continuous, no visual explosions */
   var R=BH.Rr;if(R<1)return [x,y];
   var dx=x-BH.x,dy=y-BH.y,d=Math.sqrt(dx*dx+dy*dy)+.001;
-  if(d<R*1.12)return null;
-  if(d<R*70){var wild=(drag.on&&drag.moved);var strength=wild?18.0:2.8;var edge=clamp(1-d/(R*70));var f=1+(R*R*strength)/(d*d);if(wild){f+=edge*edge*8.5;var swirl=edge*edge*0.95;var cs=Math.cos(swirl),sn=Math.sin(swirl);var wx=dx*cs-dy*sn,wy=dx*sn+dy*cs;dx=wx;dy=wy;}return [BH.x+dx*f,BH.y+dy*f];}
-  return [x,y];
+  var inner=R*1.08,outer=R*9.5;
+  if(d<inner)return null;
+  if(d>=outer)return [x,y];
+
+  var u=clamp((outer-d)/(outer-inner));
+  /* Smooth falloff keeps the lens strong near the horizon but prevents the
+     previous R²/d² singular jump that sent constellation lines off-screen. */
+  var fall=u*u*(3-2*u);
+  var wild=(drag.on&&drag.moved);
+  var strength=wild?2.35:1.25;
+  var f=1+(R*R*strength)/(d*d);
+  f=Math.min(f,wild?2.85:1.72);
+  f=1+(f-1)*fall;
+
+  if(wild){
+    var swirl=.24*fall;
+    var cs=Math.cos(swirl),sn=Math.sin(swirl);
+    var wx=dx*cs-dy*sn,wy=dx*sn+dy*cs;
+    dx=wx;dy=wy;
+  }
+  return [BH.x+dx*f,BH.y+dy*f];
+}
+function gravityPos(x,y){
+  /* Gargantua continuously lenses the galaxy; during the swallow transition,
+     keep the existing spiral pull animation. */
+  if(SW)return pull(x,y);
+  var q=lens(x,y);
+  return q ? [q[0],q[1],0] : [x,y,1];
 }
 function buildSprite(){                   /* layered gravitational lens: luminous, deep, photorealistic feel */
   var R=BH.R,S=Math.ceil(R*13),d=DPR,c=document.createElement('canvas');
@@ -615,6 +655,210 @@ function startSwallow(href){
 }
 
 /* ---------- gambar ---------- */
+function drawDistantGalaxies(now){
+  /* Tiny, faint galaxies: deliberately small so they read as very distant objects. */
+  for(var i=0;i<GAL.length;i++){
+    var d=GAL[i],px=d.x*W+mouse.x*d.rx*8,py=d.y*H+mouse.y*d.ry*6;
+    var pulse=.84+.16*Math.sin(now*.00022*d.tw+d.p),w=(6+5*d.scale)*pulse,h=(2.6+2.4*d.scale)*pulse;
+    g.save();g.translate(px,py);g.rotate(d.rot+Math.sin(now*.00007+d.p)*.04);
+    var gc=d.col||{core:'255,225,185',outer:'205,225,255',halo:'135,175,230'};
+    var halo=g.createRadialGradient(0,0,0,0,0,w*1.9);
+    halo.addColorStop(0,'rgba('+gc.core+',.20)');halo.addColorStop(.30,'rgba('+gc.outer+',.09)');halo.addColorStop(.68,'rgba('+gc.halo+',.045)');halo.addColorStop(1,'rgba('+gc.halo+',0)');
+    g.fillStyle=halo;g.globalAlpha=.78;g.beginPath();g.ellipse(0,0,w*1.7,h*1.8,0,0,6.283);g.fill();
+    g.globalAlpha=.22+.07*pulse;g.strokeStyle='rgba('+gc.outer+',.82)';g.lineWidth=.5;g.beginPath();g.ellipse(0,0,w,h,.06,0,6.283);g.stroke();
+    g.globalAlpha=.12+.06*pulse;g.strokeStyle='rgba('+gc.halo+',.78)';g.lineWidth=.55;g.beginPath();g.ellipse(0,0,w*.62,h*.52,.12,0,6.283);g.stroke();
+    g.fillStyle='rgba('+gc.core+',.30)';g.beginPath();g.ellipse(0,0,Math.max(.8,w*.17),Math.max(.55,h*.24),0,0,6.283);g.fill();
+    g.restore();
+  }
+}
+function drawFloatingTelescope(now){
+  /* Free-floating telescope: slow inertial drift, random heading changes,
+     seamless edge wrapping, and the SAME gravity pull used by the debris. */
+  if(!TELESCOPE.init){
+    TELESCOPE.init=true;
+    TELESCOPE.x=W*(.18+Math.random()*.64);
+    TELESCOPE.y=H*(.16+Math.random()*.62);
+    TELESCOPE.vx=(Math.random()<.5?-1:1)*(5+Math.random()*8);
+    TELESCOPE.vy=(Math.random()<.5?-1:1)*(2+Math.random()*6);
+    TELESCOPE.tx=TELESCOPE.vx;TELESCOPE.ty=TELESCOPE.vy;
+    TELESCOPE.ang=Math.random()*6.283;
+    TELESCOPE.va=(Math.random()-.5)*.012;
+    TELESCOPE.next=now+9000+Math.random()*11000;
+  }
+  var dt=Math.min(40,Math.max(0,now-(TELESCOPE.last||now)))/1000;
+  TELESCOPE.last=now;
+
+  if(now>TELESCOPE.next){
+    var a=Math.random()*6.283,sp=5+Math.random()*9;
+    TELESCOPE.tx=Math.cos(a)*sp;
+    TELESCOPE.ty=Math.sin(a)*sp*.72;
+    TELESCOPE.va+=(Math.random()-.5)*.004;
+    TELESCOPE.va=clamp(TELESCOPE.va,-.018,.018);
+    TELESCOPE.next=now+9000+Math.random()*11000;
+  }
+  var ease=Math.min(1,dt*.055);
+  TELESCOPE.vx+=(TELESCOPE.tx-TELESCOPE.vx)*ease;
+  TELESCOPE.vy+=(TELESCOPE.ty-TELESCOPE.vy)*ease;
+  TELESCOPE.x+=TELESCOPE.vx*dt;
+  TELESCOPE.y+=TELESCOPE.vy*dt;
+  TELESCOPE.ang+=TELESCOPE.va*dt;
+
+  /* Toroidal wrap: the same object re-enters from the opposite edge. */
+  var margin=110;
+  if(TELESCOPE.x<-margin)TELESCOPE.x=W+margin;
+  else if(TELESCOPE.x>W+margin)TELESCOPE.x=-margin;
+  if(TELESCOPE.y<-margin)TELESCOPE.y=H+margin;
+  else if(TELESCOPE.y>H+margin)TELESCOPE.y=-margin;
+
+  var lensD=Math.hypot(TELESCOPE.x-BH.x,TELESCOPE.y-BH.y);
+  var lensMag=1+0.16*clamp((BH.Rr*8-lensD)/(BH.Rr*8),0,1);
+  var sc=Math.max(.18,Math.min(.24,W/600))*lensMag;
+
+  /* Small distant scene object; still participates fully in Gargantua's gravity. */
+  var swallowedTelescope=null;
+  if(SW){
+    swallowedTelescope=pull(TELESCOPE.x,TELESCOPE.y);
+    if(swallowedTelescope[2]>.985)return;
+  }
+
+  var copies=SW?[[0,0]]:[[0,0]];
+  if(TELESCOPE.x<margin)copies.push([W,0]);
+  if(TELESCOPE.x>W-margin)copies.push([-W,0]);
+  if(TELESCOPE.y<margin)copies.push([0,H]);
+  if(TELESCOPE.y>H-margin)copies.push([0,-H]);
+  var baseCopies=copies.slice();
+  for(var ci=0;ci<baseCopies.length;ci++){
+    var bx=baseCopies[ci][0],by=baseCopies[ci][1];
+    if(TELESCOPE.y<margin&&TELESCOPE.x<margin)copies.push([bx+W,by+H]);
+    if(TELESCOPE.y<margin&&TELESCOPE.x>W-margin)copies.push([bx-W,by+H]);
+    if(TELESCOPE.y>H-margin&&TELESCOPE.x<margin)copies.push([bx+W,by-H]);
+    if(TELESCOPE.y>H-margin&&TELESCOPE.x>W-margin)copies.push([bx-W,by-H]);
+  }
+
+  for(var ci=0;ci<copies.length;ci++){
+    var tqx=TELESCOPE.x+copies[ci][0],tqy=TELESCOPE.y+copies[ci][1];
+    var tq=SW?swallowedTelescope:lens(tqx,tqy);
+    if(!tq)continue;
+
+    g.save();
+    g.translate(tq[0],tq[1]);
+    g.rotate(TELESCOPE.ang);
+    g.scale(sc,sc);
+    g.globalAlpha=1;
+
+    /*
+      Solid Hubble-like silhouette.
+      The previous version looked like a flat transparent icon because the
+      panels and body were mostly line-art. Here every major surface is filled
+      with opaque material, with perspective, bevels, panel cells and a deep
+      optical aperture to give it physical volume.
+    */
+
+    /* Solar-array shadow/spine — kept behind the instrument body. */
+    g.fillStyle='rgb(17,22,27)';
+    g.fillRect(-9,-48,4,96);
+
+    /* Solar panels sit ABOVE and BELOW the barrel, leaving the optical end completely clear. */
+    function solarWing(side){
+      var sy=side<0?-1:1;
+      var y0=sy*15, y1=sy*52;
+      var x0=-10, x1=18;
+      g.fillStyle='rgb(25,38,48)';
+      g.strokeStyle='rgb(158,171,180)';g.lineWidth=1.0;
+      g.beginPath();
+      g.moveTo(x0,y0);g.lineTo(x1,y0+sy*3);g.lineTo(x1,y1);g.lineTo(x0,y1-sy*3);g.closePath();g.fill();g.stroke();
+
+      /* Dense photovoltaic cells, with a slight blue-black metallic sheen. */
+      var rows=4,cols=5;
+      for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){
+        var xa=x0+1+c*(27/cols), xb=x0+1+(c+1)*(27/cols)-.7;
+        var ya=sy<0 ? y0-1-r*(34/rows)-7 : y0+1+r*(34/rows);
+        var yy=Math.min(ya,ya+sy*7), hh=6.2;
+        g.fillStyle=((r+c)%2)?'rgb(30,55,70)':'rgb(19,42,58)';
+        g.fillRect(xa,yy,Math.max(1,xb-xa),hh);
+        g.strokeStyle='rgb(83,111,124)';g.lineWidth=.28;g.strokeRect(xa,yy,Math.max(1,xb-xa),hh);
+      }
+      g.strokeStyle='rgb(191,201,207)';g.lineWidth=.55;
+      g.beginPath();g.moveTo(x0,y0);g.lineTo(x0,y1);g.moveTo(x1,y0+sy*3);g.lineTo(x1,y1);g.stroke();
+    }
+    solarWing(-1);solarWing(1);
+
+    /* Panel hinges/booms attach to the SIDE of the barrel, not across the lens. */
+    g.strokeStyle='rgb(190,201,207)';g.lineWidth=1.15;
+    g.beginPath();
+    g.moveTo(-3,-11);g.lineTo(-3,-17);
+    g.moveTo(10,-10);g.lineTo(10,-17);
+    g.moveTo(-3,11);g.lineTo(-3,17);
+    g.moveTo(10,10);g.lineTo(10,17);
+    g.stroke();
+    g.fillStyle='rgb(88,103,113)';
+    g.fillRect(-5,-19,4,4);g.fillRect(8,-19,4,4);g.fillRect(-5,15,4,4);g.fillRect(8,15,4,4);
+
+    /* Main telescope barrel: opaque metal with longitudinal shading. */
+    var body=g.createLinearGradient(-18,-15,30,15);
+    body.addColorStop(0,'rgb(238,241,243)');
+    body.addColorStop(.18,'rgb(208,216,222)');
+    body.addColorStop(.52,'rgb(145,157,166)');
+    body.addColorStop(.80,'rgb(89,102,111)');
+    body.addColorStop(1,'rgb(48,57,64)');
+    g.fillStyle=body;
+    g.strokeStyle='rgb(226,233,237)';g.lineWidth=1.15;
+    g.beginPath();
+    if(g.roundRect)g.roundRect(-22,-13,52,26,8);else g.rect(-22,-13,52,26);
+    g.fill();g.stroke();
+
+    /* Subtle body ribs / equipment bands. */
+    g.strokeStyle='rgb(92,104,113)';g.lineWidth=.75;
+    [-15,17].forEach(function(xx){
+      g.beginPath();g.moveTo(xx,-11);g.lineTo(xx,11);g.stroke();
+    });
+    g.strokeStyle='rgb(244,246,247)';g.lineWidth=.7;
+    g.beginPath();g.moveTo(-13,-11);g.lineTo(15,-11);g.stroke();
+
+    /* Front optical assembly: deep metal rim + glass lens, never covered by the arrays. */
+    g.fillStyle='rgb(170,181,188)';
+    g.strokeStyle='rgb(236,241,244)';g.lineWidth=1.15;
+    g.beginPath();g.ellipse(30,0,11.8,13.7,0,0,6.283);g.fill();g.stroke();
+
+    /* Recessed inner barrel. */
+    g.fillStyle='rgb(57,67,74)';
+    g.beginPath();g.ellipse(31,0,9.8,11.7,0,0,6.283);g.fill();
+
+    /* Actual optical glass: dark blue/grey rather than a flat black hole. */
+    var glass=g.createRadialGradient(28,-3,1,31,0,9.3);
+    glass.addColorStop(0,'rgb(86,111,123)');
+    glass.addColorStop(.35,'rgb(35,54,64)');
+    glass.addColorStop(.78,'rgb(10,18,23)');
+    glass.addColorStop(1,'rgb(2,5,7)');
+    g.fillStyle=glass;
+    g.beginPath();g.ellipse(32,0,7.9,9.7,0,0,6.283);g.fill();
+    g.strokeStyle='rgb(119,139,148)';g.lineWidth=.55;
+    g.beginPath();g.ellipse(32,0,7.9,9.7,0,0,6.283);g.stroke();
+
+    /* Glass reflection / curved highlight gives the tiny lens some depth. */
+    g.strokeStyle='rgba(225,239,245,.78)';g.lineWidth=.75;
+    g.beginPath();g.arc(29,-2.6,8.5,-2.55,-1.02);g.stroke();
+    g.strokeStyle='rgba(117,201,224,.35)';g.lineWidth=.55;
+    g.beginPath();g.arc(33,2.4,6.2,.35,1.85);g.stroke();
+
+    /* Rear service cap and small antenna, giving the body a front/back read. */
+    g.fillStyle='rgb(78,89,97)';
+    g.strokeStyle='rgb(201,211,217)';g.lineWidth=.85;
+    g.beginPath();g.ellipse(-22,0,4.5,12,0,0,6.283);g.fill();g.stroke();
+    g.fillStyle='rgb(176,188,195)';
+    g.fillRect(-27,-2,4,4);
+    g.strokeStyle='rgb(146,162,171)';g.lineWidth=.8;
+    g.beginPath();g.moveTo(-25,0);g.lineTo(-33,0);g.stroke();
+    g.fillStyle='rgb(91,208,226)';g.beginPath();g.arc(-34,0,1.6,0,6.283);g.fill();
+
+    /* Small service-box details: opaque and restrained. */
+    g.fillStyle='rgb(91,105,114)';g.fillRect(-4,-15,9,3);g.fillRect(-3,12,8,3);
+    g.fillStyle='rgb(211,220,225)';g.fillRect(0,-14,4,2);g.fillRect(0,12,4,2);
+
+    g.restore();
+  }
+}
+
 function drawBg(now){
   for(var i=0;i<BG.length;i++){
     var b=BG[i],x=b.x+mouse.x*b.d*14,y=b.y+mouse.y*b.d*10,k=0;
@@ -638,6 +882,38 @@ function drawShooting(now){
     g.strokeStyle=gr;g.lineWidth=1.4;g.beginPath();g.moveTo(x,y);g.lineTo(x-s.vx*tl,y-s.vy*tl);g.stroke();
   }
 }
+function asteroidScreenAt(x,y){
+  if(!AST.length)return -1;
+  var best=-1,bd=Infinity,now=performance.now();
+  for(var i=0;i<AST.length;i++){
+    var a=AST[i],t=now*a.spd+a.seed,rr=a.r*(1+.035*Math.sin(now*.0007+a.seed));
+    var ax=BH.x+Math.cos(t)*rr,ay=BH.y+Math.sin(t)*rr*a.e;
+    var z=.70+.30*(Math.sin(t)+1)/2,sz=a.sz*z;
+    if(SW){var q=pull(ax,ay);ax=q[0];ay=q[1];sz*=1-.45*q[2];}
+    ax+=a.ox;ay+=a.oy;
+    var d=Math.hypot(x-ax,y-ay);
+    if(d<Math.max(8,sz*1.9)&&d<bd){bd=d;best=i;}
+  }
+  return best;
+}
+function scatterAsteroid(i,x,y){
+  if(i<0||!AST[i]||SW)return false;
+  var a=AST[i],now=performance.now(),t=now*a.spd+a.seed,rr=a.r*(1+.035*Math.sin(now*.0007+a.seed));
+  var ax=BH.x+Math.cos(t)*rr,ay=BH.y+Math.sin(t)*rr*a.e;
+  var dx=ax-BH.x,dy=ay-BH.y,dl=Math.hypot(dx,dy)||1;
+  var nx=dx/dl,ny=dy/dl;
+  /* One short impulse, then a damped spring brings the rock home.
+     Velocities are pixels/second (not per-frame), so the kick cannot accumulate forever. */
+  var tx=-ny,ty=nx;
+  var kick=48+Math.random()*22,side=(Math.random()-.5)*18;
+  a.vx=nx*kick+tx*side;
+  a.vy=ny*kick+ty*side;
+  a.ox=Math.max(-70,Math.min(70,a.ox));
+  a.oy=Math.max(-70,Math.min(70,a.oy));
+  a.kick=1;a.kickUntil=now+700;
+  haptic(6);
+  return true;
+}
 function drawAsteroids(now){
   if(!AST.length)return;
   for(var i=0;i<AST.length;i++){
@@ -646,6 +922,16 @@ function drawAsteroids(now){
     var y=BH.y+Math.sin(t)*rr*a.e;
     var z=.70+.30*(Math.sin(t)+1)/2,sz=a.sz*z;
     if(SW){var q=pull(x,y),qq=q[2];x=q[0];y=q[1];sz*=1-.45*qq;}
+    /* Damped spring: the rock gets one impulse, flies a little, then settles back. */
+    var last=a._lastNow||now,dt=Math.min(.032,Math.max(.001,(now-last)/1000));
+    a._lastNow=now;
+    var spring=9.0,damper=5.8;
+    a.vx+=(-spring*a.ox-damper*a.vx)*dt;
+    a.vy+=(-spring*a.oy-damper*a.vy)*dt;
+    a.ox+=a.vx*dt;a.oy+=a.vy*dt;
+    if(a.kick&&now>a.kickUntil)a.kick=0;
+    if(Math.abs(a.ox)+Math.abs(a.oy)<.12&&Math.abs(a.vx)+Math.abs(a.vy)<1.2){a.ox=a.oy=a.vx=a.vy=0;a.kick=0;}
+    x+=a.ox;y+=a.oy;
     var sides=6+(i%5),rot=a.rot+now*a.rs;
     g.save();g.translate(x,y);g.rotate(rot);
     g.globalAlpha=1;
@@ -686,19 +972,35 @@ function drawTriggerVisuals(now){
   Object.keys(TRIGGERS).forEach(function(key){
     var tr=TRIGGERS[key],c=cons(tr.cons),s=c.stars[tr.star];
     if(!s||s._a<=0)return;
-    var q=pull(s.x+c.ox,s.y+c.oy),x=q[0],y=q[1],fade=(1-.85*q[2]);
+    var q=gravityPos(s.x+c.ox,s.y+c.oy),x=q[0],y=q[1],fade=(1-.85*q[2]);
     var selected=activeSfx===SFX[key];
     var hovered=hot===key;
-    var pulse=reduce?0.5:(.5+.5*Math.sin(now*.0025+s.ph));
+    /* One shared pulse language for all three stars. Only the RGB color differs. */
+    var phase=(now*.00135+s.ph)%1;
+    var breathe=reduce?0.5:(.5+.5*Math.sin(now*.0025+s.ph));
     var strength=(selected?1:.42)+(hovered?.42:0);
-    var base=s.r*2.5,ring=base+(pulse*7);
+    var base=s.r*2.5;
+    var pulseR=base+3.5+10*phase;
+    var outerR=base+9+12*phase;
+    var coreR=base*(.92+.10*breathe);
     g.save();g.globalCompositeOperation='lighter';
-    g.strokeStyle='rgba('+tr.rgb+','+(.20*strength*fade)+')';g.lineWidth=.8;g.beginPath();g.arc(x,y,base,0,6.283);g.stroke();
-    g.strokeStyle='rgba('+tr.rgb+','+(.58*strength*fade)+')';g.lineWidth=1.05;g.beginPath();g.arc(x,y,ring,0,6.283);g.stroke();
+    /* stable halo */
+    g.strokeStyle='rgba('+tr.rgb+','+(.20*strength*fade)+')';g.lineWidth=.8;g.beginPath();g.arc(x,y,coreR,0,6.283);g.stroke();
+    /* bright breathing ring */
+    g.strokeStyle='rgba('+tr.rgb+','+((.56+.18*breathe)*strength*fade)+')';g.lineWidth=1.05+.35*breathe;g.beginPath();g.arc(x,y,base+4.5*breathe,0,6.283);g.stroke();
+    /* expanding Spica-style pulse */
+    var pa=(1-phase)*(.56+.22*strength)*fade;
+    g.strokeStyle='rgba('+tr.rgb+','+pa+')';g.lineWidth=.95;g.beginPath();g.arc(x,y,pulseR,0,6.283);g.stroke();
+    /* second, softer outer wave */
+    var phase2=(phase+.42)%1,pa2=(1-phase2)*.34*strength*fade;
+    g.strokeStyle='rgba('+tr.rgb+','+pa2+')';g.lineWidth=.7;g.beginPath();g.arc(x,y,base+7+11*phase2,0,6.283);g.stroke();
+    /* selected audio gives a gentle luminous fill, not a different animation */
     if(selected){
-      var rr=base+12+8*pulse;
-      g.strokeStyle='rgba('+tr.rgb+','+(.30*strength*fade*(1-pulse*.35))+')';g.lineWidth=.8;g.beginPath();g.arc(x,y,rr,0,6.283);g.stroke();
-      g.fillStyle='rgba('+tr.rgb+','+(.10*strength*fade)+')';g.beginPath();g.arc(x,y,rr+3,0,6.283);g.fill();
+      var rg=g.createRadialGradient(x,y,0,x,y,outerR+4);
+      rg.addColorStop(0,'rgba('+tr.rgb+','+(.12*strength*fade)+')');
+      rg.addColorStop(.55,'rgba('+tr.rgb+','+(.045*strength*fade)+')');
+      rg.addColorStop(1,'rgba('+tr.rgb+',0)');
+      g.fillStyle=rg;g.beginPath();g.arc(x,y,outerR+4,0,6.283);g.fill();
     }
     g.strokeStyle='rgba('+tr.rgb+','+(.55*strength*fade)+')';g.lineWidth=.7;
     g.beginPath();g.moveTo(x-base-4,y);g.lineTo(x-base+2,y);g.moveTo(x+base-2,y);g.lineTo(x+base+4,y);g.moveTo(x,y-base-4);g.lineTo(x,y-base+2);g.moveTo(x,y+base-2);g.lineTo(x,y+base+4);g.stroke();
@@ -722,18 +1024,38 @@ function drawCons(c,age,now){
   c.lines.forEach(function(l,i){
     var p=clamp((age-c.delay-i*.28)/.8);if(p<=0)return;p=1-Math.pow(1-p,3);
     var a=c.stars[l[0]],b=c.stars[l[1]];
-    var qa=pull(a.x+ox,a.y+oy),qb=pull(b.x+ox,b.y+oy),kk=1-.9*(qa[2]+qb[2])/2;
-    var x1=qa[0],y1=qa[1],x2=x1+(qb[0]-x1)*p,y2=y1+(qb[1]-y1)*p;
     var lineHot=(c._hot===i||tapFlash.cons===c.id&&tapFlash.until>now);
-    g.strokeStyle='rgba(110,229,255,'+((lineHot?.14:.07)*kk)+')';g.lineWidth=lineHot?6:4;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();
-    g.strokeStyle='rgba(150,212,255,'+((lineHot?.72:.42)+(reduce?0:.1*Math.sin(now*.0014+i)))*kk+')';g.lineWidth=lineHot?1.8:1.1;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();
+    /* Sample the segment through the lens field.  Interpolating only the two
+       endpoints caused giant straight-line spikes when one endpoint crossed
+       the event-horizon cutoff. */
+    var pts=[],visible=0;
+    var samples=14;
+    for(var si=0;si<=samples;si++){
+      var tt=si/samples*p;
+      var qq=gravityPos(a.x+(b.x-a.x)*tt+ox,a.y+(b.y-a.y)*tt+oy);
+      if(qq[2]>=1){pts.push(null);continue;}
+      pts.push([qq[0],qq[1],qq[2]]);visible++;
+    }
+    if(visible>1){
+      var kk=1;
+      pts.forEach(function(pt){if(pt)kk=Math.min(kk,1-.55*pt[2]);});
+      g.strokeStyle='rgba(110,229,255,'+((lineHot?.14:.07)*kk)+')';g.lineWidth=lineHot?6:4;
+      g.beginPath();
+      var drawing=false;
+      pts.forEach(function(pt){if(!pt){drawing=false;return;}if(!drawing){g.moveTo(pt[0],pt[1]);drawing=true;}else g.lineTo(pt[0],pt[1]);});
+      g.stroke();
+      g.strokeStyle='rgba(150,212,255,'+((lineHot?.72:.42)+(reduce?0:.1*Math.sin(now*.0014+i)))*kk+')';g.lineWidth=lineHot?1.8:1.1;
+      g.beginPath();drawing=false;
+      pts.forEach(function(pt){if(!pt){drawing=false;return;}if(!drawing){g.moveTo(pt[0],pt[1]);drawing=true;}else g.lineTo(pt[0],pt[1]);});
+      g.stroke();
+    }
   });
 }
 function drawStars(c,age,now){
   var k2=W<500?.95:1.2;
   Object.keys(c.stars).forEach(function(k){
     var s=c.stars[k],a=clamp((age-s.t0)/.5);s._a=a;if(a<=0)return;
-    var tw=reduce?1:(1-s.twinkleDepth*.5+s.twinkleDepth*Math.sin(now*s.twinkleSpeed+s.ph)+(s.twinkleJitter?.035*Math.sin(now*.011+s.ph*3):0)),q=pull(s.x+c.ox,s.y+c.oy),x=q[0],y=q[1],kq=q[2],r=s.r*k2*(1-.6*q[2]);a*=(1-.85*kq);
+    var tw=reduce?1:(1-s.twinkleDepth*.5+s.twinkleDepth*Math.sin(now*s.twinkleSpeed+s.ph)+(s.twinkleJitter?.035*Math.sin(now*.011+s.ph*3):0)),q=gravityPos(s.x+c.ox,s.y+c.oy),x=q[0],y=q[1],kq=q[2],r=s.r*k2*(1-.6*q[2]);a*=(1-.85*kq);
     var gr=g.createRadialGradient(x,y,0,x,y,r*5);
     gr.addColorStop(0,'rgba('+s.rgb+','+(.9*a*tw)+')');gr.addColorStop(.25,'rgba('+s.rgb+','+(.34*a*tw)+')');gr.addColorStop(1,'rgba('+s.rgb+',0)');
     g.fillStyle=gr;g.beginPath();g.arc(x,y,r*5,0,6.283);g.fill();
@@ -785,7 +1107,7 @@ function drawStars(c,age,now){
 function drawSecretStar(now,age){
   if(!secretStar||SW)return;
   var tw=.9+.08*Math.sin(now*secretStar.twinkleSpeed+secretStar.ph);
-  var l=lens(secretStar.x+cons('virgo').ox,secretStar.y+cons('virgo').oy);if(!l)return;
+  var l=gravityPos(secretStar.x+cons('virgo').ox,secretStar.y+cons('virgo').oy);if(!l)return;
   g.save();g.globalAlpha=.28*tw;
   g.fillStyle='rgba(184,198,214,.72)';g.beginPath();g.arc(l[0],l[1],2.0,0,6.283);g.fill();
   g.globalAlpha=.12*tw;g.beginPath();g.arc(l[0],l[1],5.5,0,6.283);g.fill();
@@ -799,16 +1121,24 @@ function drawPulses(now,age){
   for(var i=PU.length-1;i>=0;i--){
     var p=PU[i],u=(now-p.t)/p.d;if(u>1){PU.splice(i,1);continue;}
     if(p.shock){
-      var sb=p.c.stars.betel,sx=sb.x+p.c.ox+Math.cos(p.ang)*p.sp*u,sy=sb.y+p.c.oy+Math.sin(p.ang)*p.sp*u;
-      g.fillStyle='rgba(255,96,55,'+(1-u)*.7+')';g.beginPath();g.arc(sx,sy,1.2+2*u,0,6.283);g.fill();continue;
+      var sb=p.c.stars.betel;
+      var base=gravityPos(sb.x+p.c.ox,sb.y+p.c.oy);
+      if(!base||base[2]>=1)continue;
+      var sx=base[0]+Math.cos(p.ang)*p.sp*u*(1-.35*base[2]),sy=base[1]+Math.sin(p.ang)*p.sp*u*(1-.35*base[2]);
+      g.fillStyle='rgba(255,96,55,'+(1-u)*.7*(1-.7*base[2])+')';g.beginPath();g.arc(sx,sy,1.2+2*u,0,6.283);g.fill();continue;
     }
     var A=p.c.stars[p.a],B=p.c.stars[p.b],ox=p.c.ox,oy=p.c.oy;
-    function px(t){return A.x+(B.x-A.x)*t+ox;}function py(t){return A.y+(B.y-A.y)*t+oy;}
+    function gp(t){return gravityPos(A.x+(B.x-A.x)*t+ox,A.y+(B.y-A.y)*t+oy);}
+    function px(t){return gp(t)[0];}function py(t){return gp(t)[1];}
     var t2=Math.max(0,u-.2),al=Math.sin(u*Math.PI);
-    var gr=g.createLinearGradient(px(t2),py(t2),px(u),py(u));
-    gr.addColorStop(0,'rgba(110,229,255,0)');gr.addColorStop(1,'rgba(200,245,255,'+(.95*al)+')');
-    g.strokeStyle=gr;g.lineWidth=2;g.beginPath();g.moveTo(px(t2),py(t2));g.lineTo(px(u),py(u));g.stroke();
-    g.fillStyle='rgba(235,250,255,'+al+')';g.beginPath();g.arc(px(u),py(u),2,0,6.283);g.fill();
+    var seg=[],nseg=10;
+    for(var si=0;si<=nseg;si++){var tt=t2+(u-t2)*si/nseg,qq=gp(tt);if(qq[2]<1)seg.push(qq);}
+    if(seg.length>1){
+      g.strokeStyle='rgba(200,245,255,'+(.95*al)+')';g.lineWidth=2;g.beginPath();
+      seg.forEach(function(qq,i){if(i===0)g.moveTo(qq[0],qq[1]);else g.lineTo(qq[0],qq[1]);});g.stroke();
+    }
+    var qp=gp(u);
+    if(qp[2]<1){g.fillStyle='rgba(235,250,255,'+al+')';g.beginPath();g.arc(qp[0],qp[1],2,0,6.283);g.fill();}
   }
 }
 function drawPortals(age,now){
@@ -817,17 +1147,32 @@ function drawPortals(age,now){
     var c=p.c,ox=c.ox,oy=c.oy;
     p.h+=((hot===p.id?1:0)-p.h)*.15;
     if(!SW){
-      p.el.style.transform='translate('+(p.lx+ox).toFixed(1)+'px,'+(p.ly+oy).toFixed(1)+'px)';
-      var hs=c.stars[p.hit];p.hitEl.style.transform='translate('+(hs.x+ox).toFixed(1)+'px,'+(hs.y+oy).toFixed(1)+'px)';
+      var lp=gravityPos(p.lx+ox,p.ly+oy);
+      p.el.style.transform='translate('+(lp[0]).toFixed(1)+'px,'+(lp[1]).toFixed(1)+'px)';
+      var hs=c.stars[p.hit],hp=gravityPos(hs.x+ox,hs.y+oy);
+      p.hitEl.style.transform='translate('+(hp[0]).toFixed(1)+'px,'+(hp[1]).toFixed(1)+'px)';
     }
     if(na<=0)return;
     if(!p.el.classList.contains('on'))p.el.classList.add('on');
-    g.setLineDash([3,5]);g.lineWidth=1;g.strokeStyle='rgba('+p.col+','+((.32+.45*p.h)*na)+')';
-    g.beginPath();g.moveTo(p.sx+ox,p.sy+oy);g.lineTo(p.lx+ox-2,p.ly+oy);g.stroke();g.setLineDash([]);
+    /* Portal connector and pulse rings must use the exact same lens transform
+       as the constellation stars. Otherwise the rings lag behind when the
+       black hole bends the star field. */
+    var l0=gravityPos(p.sx+ox,p.sy+oy),l1=gravityPos(p.lx+ox-2,p.ly+oy);
+    if(l0&&l1&&l0[2]<1&&l1[2]<1){
+      g.setLineDash([3,5]);g.lineWidth=1;g.strokeStyle='rgba('+p.col+','+((.32+.45*p.h)*na*(1-.5*Math.max(l0[2],l1[2])))+')';
+      g.beginPath();g.moveTo(l0[0],l0[1]);g.lineTo(l1[0],l1[1]);g.stroke();g.setLineDash([]);
+    }else g.setLineDash([]);
     p.stars.forEach(function(k){
-      var s=c.stars[k],x=s.x+ox,y=s.y+oy,pr=reduce?0:((now*.0011+s.ph)%1);
-      g.strokeStyle='rgba('+p.col+','+((.5+.4*p.h)*na)+')';g.lineWidth=1;g.beginPath();g.arc(x,y,8+2.5*p.h,0,6.283);g.stroke();
-      g.strokeStyle='rgba('+p.col+','+((1-pr)*.55*na)+')';g.beginPath();g.arc(x,y,8+pr*11,0,6.283);g.stroke();
+      var s=c.stars[k],lp=gravityPos(s.x+ox,s.y+oy);
+      if(!lp||lp[2]>=1)return;
+      var x=lp[0],y=lp[1],fade=1-.85*lp[2];
+      /* Trigger stars get their shared pulse from drawTriggerVisuals(); the
+         portal itself only contributes the non-trigger star decoration. */
+      if(!(p.id==='yt' && k==='spica')){
+        g.strokeStyle='rgba('+p.col+','+((.5+.4*p.h)*na*fade)+')';g.lineWidth=1;g.beginPath();g.arc(x,y,8+2.5*p.h,0,6.283);g.stroke();
+        var pr=reduce?0:((now*.0011+s.ph)%1);
+        g.strokeStyle='rgba('+p.col+','+((1-pr)*.55*na*fade)+')';g.beginPath();g.arc(x,y,8+pr*11,0,6.283);g.stroke();
+      }
     });
   });
 }
@@ -836,6 +1181,8 @@ function frame(now){
   if(SW)swP=clamp((now-SW.t0)/SW.dur);
   mouse.x+=(mouse.tx-mouse.x)*.05;mouse.y+=(mouse.ty-mouse.y)*.05;
   g.clearRect(0,0,W,H);
+  drawDistantGalaxies(now);
+  drawFloatingTelescope(now);
   drawBg(now);drawShooting(now);
   CONS.forEach(function(c){drawCons(c,age,now);});
   drawPulses(now,age);
@@ -903,6 +1250,14 @@ document.addEventListener('pointerdown',function(e){
     else haptic(8);
   }
 },{passive:true});
+document.addEventListener('pointerdown',function(e){
+  if(SW||reduce)return;
+  var ai=asteroidScreenAt(e.clientX,e.clientY);
+  if(ai>=0){
+    e.preventDefault();e.stopPropagation();
+    scatterAsteroid(ai,e.clientX,e.clientY);
+  }
+},{passive:false});
 $('#title').addEventListener('pointerdown',function(){
   if(SW)return;
   var h=this;h.classList.remove('gl');void h.offsetWidth;h.classList.add('gl');
@@ -947,6 +1302,8 @@ function beginBHDrag(e){
   /* Explicit interactive star/portal layers always win over Gargantua's wide grab field.
      This is important when Rigel starts close to the black hole on the initial layout. */
   if(e.target.closest && e.target.closest('#rigel-fx,#betel-fx,.hit,.portal,#owl-source,#bh-clock'))return false;
+  /* Asteroid clicks get first refusal too, so a rock near Gargantua cannot start a BH drag. */
+  if(asteroidScreenAt(e.clientX,e.clientY)>=0)return false;
   /* Star interactions always win over Gargantua's large invisible field. */
   if(constellationTargetAt(e.clientX,e.clientY))return false;
   var d=Math.hypot(e.clientX-BH.x,e.clientY-BH.y);
