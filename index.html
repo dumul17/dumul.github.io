@@ -54,9 +54,10 @@ footer nav a:hover,footer nav a:focus-visible{color:#6ee5ff;border-color:rgba(11
 footer nav svg{width:20px;height:20px;display:block}
 .quote{margin:2px 0 0;font-size:11px;font-style:italic;letter-spacing:.04em;color:rgba(184,198,214,.45)}
 .cap{display:none;position:fixed;left:0;top:0;z-index:3;font-size:10px;letter-spacing:.5em;text-transform:uppercase;color:rgba(184,198,214,.42);pointer-events:none;white-space:nowrap}
-#bh-clock{position:fixed;pointer-events:auto;cursor:pointer;left:0;top:0;z-index:5;font:500 10px/1 'Space Grotesk',system-ui,sans-serif;letter-spacing:.14em;color:rgba(196,226,240,.62);pointer-events:auto;white-space:nowrap;text-shadow:0 0 8px rgba(110,229,255,.18);text-transform:uppercase}
-#bh-clock .clock-time{font:600 13px/1 'Courier New',monospace;letter-spacing:.08em;color:#6ee5ff;text-shadow:0 0 8px rgba(110,229,255,.3)}
-#bh-clock .clock-sep{opacity:.35;padding:0 5px}
+#bh-clock{position:fixed;pointer-events:auto;cursor:pointer;left:0;top:0;z-index:5;font:500 8.5px/1 'Space Grotesk',system-ui,sans-serif;letter-spacing:.08em;color:rgba(196,226,240,.58);pointer-events:auto;white-space:nowrap;text-shadow:0 0 7px rgba(110,229,255,.16);text-transform:uppercase}
+#bh-clock .clock-time{font:600 10.5px/1 'Courier New',monospace;letter-spacing:.045em;color:#6ee5ff;text-shadow:0 0 6px rgba(110,229,255,.24)}
+#bh-clock .clock-sep{opacity:.3;padding:0 3px}
+@media (max-width:520px){#bh-clock{font-size:7.5px;letter-spacing:.06em}#bh-clock .clock-time{font-size:9.5px;letter-spacing:.025em}#bh-clock .clock-sep{padding:0 2px}}
 #betel-fx{position:fixed;left:0;top:0;z-index:4;width:52px;height:52px;margin:-26px 0 0 -26px;border:0;border-radius:50%;padding:0;background:transparent;cursor:pointer;outline:none;-webkit-tap-highlight-color:transparent}
 #betel-fx:focus-visible{outline:2px solid #ff7ad9;outline-offset:2px}
 /* visual trigger bintang: ring pulse dirender di canvas, hit area tetap transparan */
@@ -284,7 +285,8 @@ var TRIGGERS={
 function cons(id){for(var i=0;i<CONS.length;i++)if(CONS[i].id===id)return CONS[i];}
 function clockText(){
   var now=new Date(),h=now.getUTCHours(),m=now.getUTCMinutes(),sec=now.getUTCSeconds();
-  return (h<10?'0':'')+h+':'+(m<10?'0':'')+m+':'+(sec<10?'0':'')+sec;
+  var ap=h<12?'AM':'PM',hh=h%12;if(hh===0)hh=12;
+  return (hh<10?'0':'')+hh+':'+(m<10?'0':'')+m+':'+(sec<10?'0':'')+sec+' '+ap;
 }
 function tickClock(){
   var el=$('#bh-clock');
@@ -386,10 +388,10 @@ function layout(){
   }
   /* sabuk asteroid lokal di sekitar Gargantua: ringan, tidak memenuhi layar */
   AST=[];
-  var ac=Math.max(18,Math.min(34,Math.round(W*H/18000)));
+  var ac=Math.max(22,Math.min(42,Math.round(W*H/15000)));
   for(var j=0;j<ac;j++){
     var ang=Math.random()*Math.PI*2,rad=Math.min(W,H)*(.12+Math.random()*.22);
-    AST.push({a:ang,r:rad,e:.72+Math.random()*.28,spd:(.000045+Math.random()*.000075)*(Math.random()<.5?1:-1),sz:.7+Math.random()*2.5,rot:Math.random()*6.28,rs:(Math.random()-.5)*.0018,al:.22+Math.random()*.42,seed:Math.random()*6.28});
+    AST.push({a:ang,r:rad,e:.72+Math.random()*.28,spd:(.000045+Math.random()*.000075)*(Math.random()<.5?1:-1),sz:2.0+Math.random()*5.8,rot:Math.random()*6.28,rs:(Math.random()-.5)*.0018,al:.96+Math.random()*.04,seed:Math.random()*6.28});
   }
 }
 
@@ -410,73 +412,176 @@ function lens(x,y){                       /* pembelokan cahaya bintang di sekita
   if(d<R*70){var wild=(drag.on&&drag.moved);var strength=wild?18.0:2.8;var edge=clamp(1-d/(R*70));var f=1+(R*R*strength)/(d*d);if(wild){f+=edge*edge*8.5;var swirl=edge*edge*0.95;var cs=Math.cos(swirl),sn=Math.sin(swirl);var wx=dx*cs-dy*sn,wy=dx*sn+dy*cs;dx=wx;dy=wy;}return [BH.x+dx*f,BH.y+dy*f];}
   return [x,y];
 }
-function buildSprite(){                   /* cincin ganda + berkas cahaya menyilang, gaya "black hole portal" */
-  var R=BH.R,S=Math.ceil(R*11),d=DPR,c=document.createElement('canvas');
+function buildSprite(){                   /* layered gravitational lens: luminous, deep, photorealistic feel */
+  var R=BH.R,S=Math.ceil(R*13),d=DPR,c=document.createElement('canvas');
   c.width=c.height=Math.ceil(S*d);
   var s=c.getContext('2d');s.scale(d,d);
-  var cx=S/2,cy=S/2,CY='110,229,255',PK='255,122,217';
+  var cx=S/2,cy=S/2;
+
+  /* Broad atmospheric scattering: soft blue-white, never neon. */
   s.globalCompositeOperation='lighter';
-  var gr=s.createRadialGradient(cx,cy,R*.95,cx,cy,R*3.4);
-  gr.addColorStop(0,'rgba('+CY+',.4)');gr.addColorStop(.45,'rgba('+CY+',.1)');gr.addColorStop(1,'rgba('+CY+',0)');
-  s.fillStyle=gr;s.beginPath();s.arc(cx,cy,R*3.4,0,6.283);s.fill();
-  var ang=-.5;                                /* berkas cahaya diagonal menyilang lingkaran */
-  s.save();s.translate(cx,cy);s.rotate(ang);
-  var lg=s.createLinearGradient(-R*4.6,0,R*4.6,0);
-  lg.addColorStop(0,'rgba('+CY+',0)');lg.addColorStop(.24,'rgba('+CY+',.5)');lg.addColorStop(.5,'rgba(232,250,255,1)');lg.addColorStop(.76,'rgba('+PK+',.5)');lg.addColorStop(1,'rgba('+PK+',0)');
-  s.fillStyle=lg;s.beginPath();s.ellipse(0,0,R*4.6,R*.09,0,0,6.283);s.fill();
-  s.globalAlpha=.28;s.beginPath();s.ellipse(0,0,R*4.6,R*.34,0,0,6.283);s.fill();s.globalAlpha=1;
-  var rng=[.31,.52,.7,.86,-.34,-.56,-.74];
-  for(var i=0;i<rng.length;i++){
-    var u=rng[i],x=u*R*4.4,sp=(1-Math.pow(Math.abs(u),1.4))*R*.6;
-    s.fillStyle='rgba(255,255,255,'+(.8-.4*Math.abs(u))+')';
-    s.beginPath();s.arc(x,(i%2?1:-1)*sp*.18,R*.045,0,6.283);s.fill();
-  }
-  s.restore();
-  s.globalCompositeOperation='source-over';s.fillStyle='#020407';s.beginPath();s.arc(cx,cy,R,0,6.283);s.fill();
-  s.globalCompositeOperation='lighter';
-  s.strokeStyle='rgba(235,250,255,.95)';s.lineWidth=R*.045;s.shadowColor='rgba('+CY+',1)';s.shadowBlur=R*.4*d;
-  s.beginPath();s.arc(cx,cy,R*1.02,0,6.283);s.stroke();
-  s.shadowBlur=R*.55*d;s.strokeStyle='rgba('+CY+',.85)';s.lineWidth=R*.16;
-  s.beginPath();s.arc(cx,cy,R*1.24,0,6.283);s.stroke();
-  s.shadowBlur=R*.3*d;s.strokeStyle='rgba('+PK+',.4)';s.lineWidth=R*.07;
-  s.beginPath();s.arc(cx,cy,R*1.42,0,6.283);s.stroke();
+  var halo=s.createRadialGradient(cx,cy,R*.72,cx,cy,R*4.0);
+  halo.addColorStop(0,'rgba(220,238,255,.13)');
+  halo.addColorStop(.24,'rgba(155,195,235,.10)');
+  halo.addColorStop(.48,'rgba(100,145,195,.055)');
+  halo.addColorStop(.72,'rgba(55,85,125,.025)');
+  halo.addColorStop(1,'rgba(20,35,55,0)');
+  s.fillStyle=halo;s.beginPath();s.arc(cx,cy,R*4,0,6.283);s.fill();
+
+  /* Multiple lensing layers: the thick luminous structure around the horizon. */
+  var layers=[
+    {r:1.34,w:.105,c:'rgba(92,140,195,.18)',b:.28},
+    {r:1.23,w:.080,c:'rgba(150,190,230,.30)',b:.24},
+    {r:1.14,w:.055,c:'rgba(220,235,246,.54)',b:.18},
+    {r:1.075,w:.034,c:'rgba(250,252,250,.84)',b:.13},
+    {r:1.025,w:.022,c:'rgba(255,255,252,.96)',b:.10}
+  ];
+  layers.forEach(function(L){
+    s.strokeStyle=L.c;s.lineWidth=Math.max(.8,R*L.w);
+    s.shadowColor=L.c;s.shadowBlur=R*L.b;
+    s.beginPath();s.arc(cx,cy,R*L.r,0,6.283);s.stroke();
+  });
   s.shadowBlur=0;
+
+  /* Broad, layered accretion disk. It is thin at the equator but has depth and haze. */
+  var ang=-.48;
+  s.save();s.translate(cx,cy);s.rotate(ang);
+  var outer=s.createLinearGradient(-R*5.1,0,R*5.1,0);
+  outer.addColorStop(0,'rgba(45,80,130,0)');
+  outer.addColorStop(.14,'rgba(80,125,185,.10)');
+  outer.addColorStop(.29,'rgba(125,170,220,.24)');
+  outer.addColorStop(.42,'rgba(205,225,240,.52)');
+  outer.addColorStop(.49,'rgba(250,249,240,.78)');
+  outer.addColorStop(.56,'rgba(255,218,192,.55)');
+  outer.addColorStop(.68,'rgba(160,185,220,.28)');
+  outer.addColorStop(.84,'rgba(75,110,165,.10)');
+  outer.addColorStop(1,'rgba(35,60,100,0)');
+  s.fillStyle=outer;s.shadowColor='rgba(170,205,240,.34)';s.shadowBlur=R*.34;
+  s.beginPath();s.ellipse(0,0,R*4.9,R*.16,0,0,6.283);s.fill();
+  s.shadowBlur=0;
+
+  var mid=s.createLinearGradient(-R*4.7,0,R*4.7,0);
+  mid.addColorStop(0,'rgba(80,120,180,0)');
+  mid.addColorStop(.34,'rgba(155,190,225,.13)');
+  mid.addColorStop(.46,'rgba(235,241,244,.58)');
+  mid.addColorStop(.54,'rgba(255,232,215,.48)');
+  mid.addColorStop(.67,'rgba(125,160,210,.16)');
+  mid.addColorStop(1,'rgba(60,95,150,0)');
+  s.fillStyle=mid;s.beginPath();s.ellipse(0,0,R*4.75,R*.075,0,0,6.283);s.fill();
+  s.restore();
+
+  /* Dark event horizon: clean and deep. */
+  s.globalCompositeOperation='source-over';
+  s.fillStyle='#000102';s.beginPath();s.arc(cx,cy,R*1.015,0,6.283);s.fill();
+
+  /* Crisp Einstein ring over the horizon. */
+  s.globalCompositeOperation='lighter';
+  s.strokeStyle='rgba(250,252,252,.96)';s.lineWidth=Math.max(1,R*.026);
+  s.shadowColor='rgba(195,220,246,.62)';s.shadowBlur=R*.18;
+  s.beginPath();s.arc(cx,cy,R*1.028,0,6.283);s.stroke();
+  s.shadowBlur=0;
+
+  /* Foreground edge of the disk crosses in front of the black hole. */
+  s.save();s.translate(cx,cy);s.rotate(ang);
+  var fg=s.createLinearGradient(-R*4.8,0,R*4.8,0);
+  fg.addColorStop(0,'rgba(65,105,165,0)');
+  fg.addColorStop(.26,'rgba(130,175,220,.13)');
+  fg.addColorStop(.41,'rgba(225,237,244,.46)');
+  fg.addColorStop(.49,'rgba(255,255,251,.82)');
+  fg.addColorStop(.55,'rgba(255,218,198,.56)');
+  fg.addColorStop(.69,'rgba(125,165,215,.18)');
+  fg.addColorStop(1,'rgba(55,90,145,0)');
+  s.fillStyle=fg;s.shadowColor='rgba(220,235,250,.38)';s.shadowBlur=R*.16;
+  s.beginPath();s.ellipse(0,0,R*4.7,R*.038,0,0,6.283);s.fill();
+  s.restore();
+
+  s.shadowBlur=0;s.globalCompositeOperation='source-over';
   BH.sprite=c;BH.S=S;
 }
+
 function drawHole(now,age){
   var a=clamp((age-.9)/1.5),sc=1-Math.pow(1-a,3),e=SW?ease(swP):0;
   BH.Rr=BH.R*sc*(1+1.6*e);
   if(BH.Rr<1||!BH.sprite)return;
+
   BH.h+=((hot==='bh'?1:0)-BH.h)*.12;
   var R=BH.Rr,k=(R/BH.R)*(1+(reduce?0:.012*Math.sin(now*.0016))),S=BH.S*k;
-  g.save();g.translate(BH.x,BH.y);
+
+  g.save();
+  g.translate(BH.x,BH.y);
+
+  /* Core + static portal artwork */
   g.globalAlpha=Math.min(1,.86+.14*BH.h+.5*e);
   g.drawImage(BH.sprite,-S/2,-S/2,S,S);
-  g.globalAlpha=1;g.globalCompositeOperation='lighter';
-  var sp=.00032*(1+.9*BH.h+3*e);
-  for(var m=0;m<7;m++){                  /* kilau yang berputar di sepanjang cakram */
-    var ph=(now*sp+m/7)%1,u=ph*2-1,al=Math.pow(1-Math.abs(u),1.6)*(.5+.3*BH.h+.3*e);
-    g.fillStyle='rgba(235,250,255,'+al+')';
-    g.beginPath();g.ellipse(u*R*4,R*.05,R*.55,R*.045,0,0,6.283);g.fill();
+  g.globalAlpha=1;
+
+  /*
+   * Animated gravitational pulse rings.
+   * They are deliberately offset in phase so Gargantua feels alive even
+   * when it is not being dragged.
+   */
+  if(!reduce){
+    g.globalCompositeOperation='lighter';
+
+    /* One restrained breathing Einstein ring: slow, shallow, photorealistic. */
+    var breathe=.5+.5*Math.sin(now*.00115);
+    var ringR=R*(1.022+.012*breathe);
+    g.strokeStyle='rgba(238,245,248,'+(.42+.22*breathe)+')';
+    g.lineWidth=Math.max(.65,R*(.022+.008*breathe));
+    g.shadowColor='rgba(185,215,245,'+(.18+.10*breathe)+')';
+    g.shadowBlur=R*(.10+.08*breathe);
+    g.beginPath();g.arc(0,0,ringR,0,6.283);g.stroke();
+    g.shadowBlur=0;
+
+    /* Extremely faint expanding lens ripples, spaced far apart. */
+    var pulseT=now*.00022;
+    for(var pr=0;pr<3;pr++){
+      var ph=(pulseT+pr/3)%1;
+      var rr=R*(2.0+ph*4.0);
+      var al=(1-ph)*.035;
+      g.strokeStyle='rgba(150,185,220,'+al+')';
+      g.lineWidth=.55;
+      g.beginPath();g.arc(0,0,rr,0,6.283);g.stroke();
+    }
+
+    /* Thin moving heat on the accretion disk; restrained so it reads as matter, not neon. */
+    var sp=.00024*(1+.55*BH.h+1.8*e);
+    for(var m=0;m<7;m++){
+      var ph2=(now*sp+m/7)%1,u=ph2*2-1;
+      var al2=Math.pow(1-Math.abs(u),1.9)*(.18+.12*BH.h+.10*e);
+      g.fillStyle='rgba(235,240,245,'+al2+')';
+      g.beginPath();
+      g.ellipse(u*R*4.1,R*.02,R*(.025+.012*(1-Math.abs(u))),R*.018,0,0,6.283);
+      g.fill();
+    }
   }
+
   g.restore();
+
   if(drag.on&&drag.moved){
     g.save();g.globalCompositeOperation='lighter';
     for(var di=1;di<=18;di++){
-      var dr=R*(2.2+di*3.7), da=.34*(1-di/20);
-      g.strokeStyle='rgba(110,229,255,'+da+')';g.lineWidth=1+(di===1?.7:0);
+      var dr=R*(2.2+di*3.7), da2=.34*(1-di/20);
+      g.strokeStyle='rgba(130,170,205,'+(da2*.42)+')';g.lineWidth=.8+(di===1?.5:0);
       g.beginPath();g.arc(BH.x,BH.y,dr,0,6.283);g.stroke();
     }
     var grd=g.createRadialGradient(BH.x,BH.y,R*.8,BH.x,BH.y,R*28);
-    grd.addColorStop(0,'rgba(110,229,255,.16)');grd.addColorStop(.22,'rgba(255,122,217,.07)');grd.addColorStop(.5,'rgba(110,229,255,.025)');grd.addColorStop(1,'rgba(110,229,255,0)');
+    grd.addColorStop(0,'rgba(175,205,230,.10)');
+    grd.addColorStop(.22,'rgba(210,220,225,.035)');
+    grd.addColorStop(.5,'rgba(110,145,180,.018)');
+    grd.addColorStop(1,'rgba(90,120,155,0)');
     g.fillStyle=grd;g.beginPath();g.arc(BH.x,BH.y,R*11,0,6.283);g.fill();
     g.restore();
   }
-  if(SW){                                /* kilatan cahaya di akhir sebelum masuk ke dumul.html */
+
+  if(SW){
     var f=clamp((swP-.80)/.18);
     if(f>0){
-      var fr=Math.sqrt(W*W+H*H)*(.12+.75*f),gr=g.createRadialGradient(BH.x,BH.y,0,BH.x,BH.y,fr);
-      gr.addColorStop(0,'rgba(232,250,255,'+(.95*f)+')');gr.addColorStop(.4,'rgba(110,229,255,'+(.55*f)+')');gr.addColorStop(1,'rgba(110,229,255,0)');
+      var fr=Math.sqrt(W*W+H*H)*(.12+.75*f),
+          gr=g.createRadialGradient(BH.x,BH.y,0,BH.x,BH.y,fr);
+      gr.addColorStop(0,'rgba(232,250,255,'+(.95*f)+')');
+      gr.addColorStop(.4,'rgba(110,229,255,'+(.55*f)+')');
+      gr.addColorStop(1,'rgba(110,229,255,0)');
       g.fillStyle=gr;g.fillRect(0,0,W,H);
     }
   }
@@ -539,23 +644,44 @@ function drawAsteroids(now){
     var a=AST[i],t=now*a.spd+a.seed,rr=a.r*(1+.035*Math.sin(now*.0007+a.seed));
     var x=BH.x+Math.cos(t)*rr;
     var y=BH.y+Math.sin(t)*rr*a.e;
-    /* sedikit perspektif: batu yang lebih dekat tampak lebih besar */
-    var z=.72+.28*(Math.sin(t)+1)/2,sz=a.sz*z;
-    if(SW){var q=pull(x,y),qq=q[2];x=q[0];y=q[1];sz*=1-.55*qq;}
-    var sides=5+(i%4),rot=a.rot+now*a.rs;
-    g.save();g.translate(x,y);g.rotate(rot);g.globalAlpha=a.al*(reduce?1:(.82+.18*Math.sin(now*.001+a.seed)));
-    g.fillStyle='rgba(38,51,61,.9)';g.strokeStyle='rgba(139,177,196,.34)';g.lineWidth=.55;
+    var z=.70+.30*(Math.sin(t)+1)/2,sz=a.sz*z;
+    if(SW){var q=pull(x,y),qq=q[2];x=q[0];y=q[1];sz*=1-.45*qq;}
+    var sides=6+(i%5),rot=a.rot+now*a.rs;
+    g.save();g.translate(x,y);g.rotate(rot);
+    g.globalAlpha=1;
+    /* Dense, opaque rocky debris: dark silhouette first, then restrained mineral highlights. */
+    g.shadowColor='rgba(0,0,0,.95)';g.shadowBlur=Math.max(1.5,sz*1.15);
+    var rock=g.createLinearGradient(-sz,-sz,sz,sz);
+    rock.addColorStop(0,'rgba(78,82,82,1)');
+    rock.addColorStop(.28,'rgba(38,40,40,1)');
+    rock.addColorStop(.68,'rgba(15,16,17,1)');
+    rock.addColorStop(1,'rgba(4,5,6,1)');
+    g.fillStyle=rock;
+    g.strokeStyle='rgba(3,4,5,1)';g.lineWidth=Math.max(.7,sz*.10);
     g.beginPath();
     for(var k=0;k<sides;k++){
-      var aa=k*Math.PI*2/sides,rr2=sz*(.72+.34*Math.sin(k*12.7+a.seed));
+      var aa=k*Math.PI*2/sides;
+      var rr2=sz*(.70+.38*Math.sin(k*9.71+a.seed)+.10*Math.cos(k*4.17+a.seed*1.7));
       var px=Math.cos(aa)*rr2,py=Math.sin(aa)*rr2*.72;
       if(k===0)g.moveTo(px,py);else g.lineTo(px,py);
     }
     g.closePath();g.fill();g.stroke();
-    g.fillStyle='rgba(190,220,232,.13)';g.beginPath();g.arc(-sz*.18,-sz*.15,Math.max(.25,sz*.22),0,6.283);g.fill();
+    g.shadowBlur=0;
+
+    /* Uneven mineral facets and small craters make the rocks read as solid debris. */
+    g.fillStyle='rgba(150,154,151,.18)';
+    g.beginPath();g.moveTo(-sz*.58,-sz*.08);g.lineTo(-sz*.12,-sz*.55);g.lineTo(sz*.18,-sz*.26);g.lineTo(-sz*.08,sz*.02);g.closePath();g.fill();
+    g.fillStyle='rgba(0,0,0,.88)';
+    g.beginPath();g.arc(sz*.18,-sz*.12,Math.max(.35,sz*.15),0,6.283);g.fill();
+    if(sz>1.7){
+      g.beginPath();g.arc(-sz*.27,sz*.18,Math.max(.28,sz*.10),0,6.283);g.fill();
+    }
+    g.strokeStyle='rgba(180,185,182,.24)';g.lineWidth=Math.max(.3,sz*.045);
+    g.beginPath();g.moveTo(-sz*.35,-sz*.34);g.lineTo(sz*.22,-sz*.48);g.stroke();
     g.restore();
   }
 }
+
 function drawTriggerVisuals(now){
   Object.keys(TRIGGERS).forEach(function(key){
     var tr=TRIGGERS[key],c=cons(tr.cons),s=c.stars[tr.star];
