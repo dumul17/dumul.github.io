@@ -211,19 +211,18 @@ var TRIGGERS={
 };
 function cons(id){for(var i=0;i<CONS.length;i++)if(CONS[i].id===id)return CONS[i];}
 function clockText(){
-  var now=new Date(),wib=new Date(now.getTime()+(now.getTimezoneOffset()*60000)+7*3600000);
-  var h=wib.getHours(),m=wib.getMinutes();
-  return (h<10?'0':'')+h+':'+(m<10?'0':'')+m;
+  var now=new Date(),h=now.getUTCHours(),m=now.getUTCMinutes(),sec=now.getUTCSeconds();
+  return (h<10?'0':'')+h+':'+(m<10?'0':'')+m+':'+(sec<10?'0':'')+sec;
 }
 function tickClock(){
   var el=$('#bh-clock');
   if(!el)return;
-  var now=new Date(),wib=new Date(now.getTime()+(now.getTimezoneOffset()*60000)+7*3600000);
+  var now=new Date();
   var days=['SUN','MON','TUE','WED','THU','FRI','SAT'];
   var months=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-  var day=days[wib.getDay()],date=wib.getDate(),mon=months[wib.getMonth()];
+  var day=days[now.getUTCDay()],date=now.getUTCDate(),mon=months[now.getUTCMonth()];
   var time=clockText();
-  el.innerHTML='<span>'+day+' '+date+' '+mon+' WIB</span><span class="clock-sep">·</span><span class="clock-time">'+time+'</span>';
+  el.innerHTML='<span>'+day+' '+date+' '+mon+' UTC</span><span class="clock-sep">·</span><span class="clock-time">'+time+'</span>';
 }
 PORTALS.forEach(function(p){
   p.c=cons(p.cons);p.h=0;
@@ -542,18 +541,22 @@ function drawStars(c,age,now){
       /*
        * Mini spectrum:
        * - only visible while its own audio is actually PLAYING
-       * - always sits outside the label with a clear gap
+       * - always sits outside the label with a measured gap
        * - Spica points left; Betelgeuse/Rigel point right
        */
       if(tr&&isPlaying){
-        var bars=9, gap=2.2, bw=1.45, total=bars*bw+(bars-1)*gap;
-        var sx=(s.nx<0)?(labelX-total-11):(labelX+11);
+        var bars=7, gap=1.8, bw=1.35, total=bars*bw+(bars-1)*gap;
+        var labelW=g.measureText(s.name).width, gapFromText=8;
+        /* nx<0 means the label is right-aligned (Spica), otherwise left-aligned. */
+        var sx=(s.nx<0)
+          ? (labelX-labelW-gapFromText-total)
+          : (labelX+labelW+gapFromText);
         var sy=labelY-7;
         g.save();g.globalCompositeOperation='lighter';
         for(var bi=0;bi<bars;bi++){
           var wave=.5+.5*Math.sin(now*.009+bi*1.17+s.ph);
           var center=1-Math.abs((bi-(bars-1)/2)/((bars-1)/2));
-          var bhh=2.5+8.5*wave*(.35+.65*center);
+          var bhh=2+7.2*wave*(.35+.65*center);
           var ba=.38+.52*wave;
           g.fillStyle='rgba('+tr.rgb+','+ba+')';
           g.fillRect(sx+bi*(bw+gap),sy+6-bhh,bw,bhh);
@@ -649,7 +652,7 @@ ambTry();
 ['pointerdown','touchstart','keydown','click'].forEach(function(ev){
   document.addEventListener(ev,ambTry,{once:true,passive:true});
 });
-tickClock();setInterval(tickClock,15000);
+tickClock();setInterval(tickClock,1000);
 var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(layout,120);});
 window.__hub={ready:true};
 if(document.fonts&&document.fonts.addEventListener){document.fonts.addEventListener('loadingdone',function(){if(W)layout();});}
