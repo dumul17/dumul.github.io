@@ -82,7 +82,7 @@ body.sw{pointer-events:none}
 #owl-source{position:fixed;right:14px;top:calc(14px + env(safe-area-inset-top,0px));z-index:6;width:34px;height:34px;display:grid;place-items:center;color:rgba(184,198,214,.46);text-decoration:none;border:1px solid rgba(110,229,255,.12);border-radius:50%;background:rgba(6,11,17,.32);backdrop-filter:blur(4px);transition:color .2s,border-color .2s,transform .2s,box-shadow .2s}
 #owl-source:hover,#owl-source:focus-visible{color:#6ee5ff;border-color:rgba(110,229,255,.55);box-shadow:0 0 16px rgba(110,229,255,.16);transform:translateY(-1px)}
 #owl-source svg{width:19px;height:19px}
-#secret-msg{position:fixed;left:50%;top:43%;z-index:30;transform:translate(-50%,-50%);font:700 clamp(15px,4.2vw,24px)/1 'Courier New',monospace;letter-spacing:.16em;color:#eafcff;text-shadow:0 0 4px #fff,0 0 12px rgba(110,229,255,.95),0 0 28px rgba(110,229,255,.7);opacity:0;pointer-events:none;transition:opacity .25s;white-space:nowrap;padding:9px 14px;border:1px solid rgba(110,229,255,.35);border-radius:5px;background:rgba(2,7,12,.78);box-shadow:0 0 24px rgba(110,229,255,.16),inset 0 0 18px rgba(110,229,255,.06);backdrop-filter:blur(3px)}
+#secret-msg{position:fixed;left:50%;top:50%;z-index:30;transform:translate(-50%,-50%);font:600 9px/1 'Courier New',monospace;letter-spacing:.08em;color:#eafcff;text-shadow:0 0 3px #fff,0 0 8px rgba(110,229,255,.9),0 0 16px rgba(110,229,255,.55);opacity:0;pointer-events:none;transition:opacity .25s;white-space:nowrap;padding:5px 7px;border:1px solid rgba(110,229,255,.28);border-radius:3px;background:rgba(2,7,12,.72);box-shadow:0 0 12px rgba(110,229,255,.12),inset 0 0 9px rgba(110,229,255,.04)}
 #secret-msg.on{opacity:1}
 #terminal{position:fixed;left:50%;bottom:74px;z-index:10;width:min(88vw,430px);padding:14px 16px;border:1px solid rgba(110,229,255,.38);background:rgba(3,8,12,.92);box-shadow:0 0 30px rgba(110,229,255,.12),inset 0 0 22px rgba(110,229,255,.035);font:11px/1.65 'Courier New',monospace;color:#8eeeff;opacity:0;transform:translate(-50%,18px);pointer-events:none;transition:opacity .35s,transform .35s}
 #terminal.on{opacity:1;transform:translate(-50%,0)}
@@ -107,14 +107,14 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
   /* Keep the transient Konami override inside narrow phone viewports.
      The desktop minimum font-size (15px) plus wide letter-spacing can make
      this one-line message exceed a 360px screen. */
-  #secret-msg{left:8px;right:8px;width:auto;max-width:none;transform:translateY(-50%);font-size:clamp(8px,2.8vw,14px);letter-spacing:.08em;padding:8px 8px;overflow:hidden;white-space:nowrap;text-align:center}
+  #secret-msg{font-size:8px;letter-spacing:.06em;padding:4px 6px}
 }
 
 @media (prefers-reduced-motion:reduce){h1.gl .big,h1.gl .kicker{animation-duration:.01s}}
 </style>
-<meta name="gimmick-revision" content="v30: v27 baseline + Gargantua audio spectrum visualizer; audio-reactive ring only while Betelgeuse/Rigel/Spica plays">
+<meta name="gimmick-revision" content="v32: v27 baseline + Gargantua audio spectrum visualizer + dense rings + blur-free breathing ring; telescope easter egg">
 </head>
-<body data-gimmick-baseline="v25" data-gimmick-revision="v27-performance-robustness">
+<body data-gimmick-baseline="v25" data-gimmick-revision="v32-telescope-easter-egg">
 <canvas id="sky" aria-hidden="true"></canvas>
 <div class="scan" aria-hidden="true"></div>
 <header id="header">
@@ -159,7 +159,7 @@ var touchMode=('ontouchstart' in window)||navigator.maxTouchPoints>0;
 var drag={on:false,moved:false,pid:null,x0:0,y0:0,bx:0,by:0};
 var tapFlash={until:0,cons:null};
 var konamiSeq=[],konami=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight'];
-var utcClicks=0,utcReset=0,secretStar=null;
+var utcClicks=0,utcReset=0;
 var SW=null,swP=0;
 var AMB=mkAudio('constellation.mp3',.5,true);
 var GARG=mkAudio('gargantua.mp3',0,true);
@@ -181,6 +181,7 @@ function showSecretSequence(){
   var el=$('#secret-msg');if(!el)return;
   clearTimeout(el._t);clearTimeout(el._type);
   el.classList.add('on');el.textContent='';
+  placeSecretMsg();
   var first='Hello, I love You...',finalText='Hello, Friend...';
   var i=0,phase=0;
   function typeFirst(){
@@ -367,10 +368,10 @@ function drawAudioVisualizer(now,R){
        costs almost nothing beyond the two hero rings below - just what
        makes it read as "dense" like the reference photo. Cyan and pink
        alternate and interleave, same as the reference's colour blend. */
-    var DENSE=11;
+    var DENSE=17;
     for(var d=0;d<DENSE;d++){
       var dp=d/(DENSE-1),pink=d%2===1;
-      var base=1.10+dp*1.9,growth=R*(.05+.16*dp+.12*lv+.10*beat);
+      var base=1.08+dp*1.65,growth=R*(.05+.16*dp+.12*lv+.10*beat);
       var alpha=(1-dp*.72)*(.10+.09*lv+.10*beat);
       strokeCheapRing(R,base,growth,lv,beat,pink?'255,70,215':'110,229,255',alpha,Math.max(.5,R*.007));
     }
@@ -480,8 +481,6 @@ CONS.forEach(function(c,ci){
     [l[0],l[1]].forEach(function(k){var s=c.stars[k];s.t0=Math.min(s.t0===c.delay+.2?1e9:s.t0,c.delay+i*.28);});
   });
 });
-/* hidden dim star: deliberately ordinary-looking and away from the main labels */
-secretStar={ra:188.55,dec:6.65,r:.78,c:'#b8c6d6',rgb:'184,198,214',ph:4.7,twinkleSpeed:.0009,twinkleDepth:.07};
 var CAPS={orion:$('#cap-orion'),virgo:$('#cap-virgo'),bh:$('#cap-bh')};
 
 var PORTALS=[
@@ -564,10 +563,6 @@ function layout(){
       c.maxX=Math.max(c.maxX,s.x);c.maxY=Math.max(c.maxY,s.y);c.minY=Math.min(c.minY,s.y);c.minX=Math.min(c.minX,s.x);
     });
     if(c.nebula){c.nebula.x=x0+(c.nebula.rx-c.minx)*sc;c.nebula.y=y0+(c.nebula.ry-c.miny)*sc;}
-    if(c.id==='virgo'){
-      secretStar.x=x0+(-(secretStar.ra-c.ra0)*Math.cos(secretStar.dec*Math.PI/180)-c.minx)*sc;
-      secretStar.y=y0+(-secretStar.dec-c.miny)*sc;
-    }
   });
   var clk=$('#bh-clock'),ft2=$('#footer').getBoundingClientRect();
   clk.style.transform='translate(calc(14px + env(safe-area-inset-left,0px)),'+Math.round(ft2.top-26)+'px)';
@@ -820,12 +815,14 @@ function drawHole(now,age){
     /* One restrained breathing Einstein ring: slow, shallow, photorealistic. */
     var breathe=.5+.5*Math.sin(now*.00115);
     var ringR=R*(1.022+.012*breathe);
-    g.strokeStyle='rgba(238,245,248,'+(.42+.22*breathe)+')';
-    g.lineWidth=Math.max(.65,R*(.022+.008*breathe));
-    g.shadowColor='rgba(185,215,245,'+(.18+.10*breathe)+')';
-    g.shadowBlur=R*(.10+.08*breathe);
+    /* Blur-free breathing ring: wide translucent halo stroke + bright core.
+       Avoid dynamic shadowBlur on every frame for mobile canvas performance. */
+    g.strokeStyle='rgba(185,215,245,'+(.09+.06*breathe)+')';
+    g.lineWidth=Math.max(1,R*(.065+.018*breathe));
     g.beginPath();g.arc(0,0,ringR,0,6.283);g.stroke();
-    g.shadowBlur=0;
+    g.strokeStyle='rgba(238,245,248,'+(.55+.18*breathe)+')';
+    g.lineWidth=Math.max(.65,R*(.022+.008*breathe));
+    g.beginPath();g.arc(0,0,ringR,0,6.283);g.stroke();
 
     /* Extremely faint expanding lens ripples, spaced far apart. */
     var pulseT=now*.00022;
@@ -1358,14 +1355,17 @@ function drawStars(c,age,now){
     }
   });
 }
-function drawSecretStar(now,age){
-  if(!secretStar||SW)return;
-  var tw=.9+.08*Math.sin(now*secretStar.twinkleSpeed+secretStar.ph);
-  var l=gravityPos(secretStar.x+cons('virgo').ox,secretStar.y+cons('virgo').oy);if(!l)return;
-  g.save();g.globalAlpha=.28*tw;
-  g.fillStyle='rgba(184,198,214,.72)';g.beginPath();g.arc(l[0],l[1],2.0,0,6.283);g.fill();
-  g.globalAlpha=.12*tw;g.beginPath();g.arc(l[0],l[1],5.5,0,6.283);g.fill();
-  g.restore();
+function telescopeScreenPos(){
+  var q=lens(TELESCOPE.x,TELESCOPE.y);
+  return q ? [q[0],q[1]] : [TELESCOPE.x,TELESCOPE.y];
+}
+function placeSecretMsg(){
+  var el=$('#secret-msg'),p=telescopeScreenPos();
+  if(!el||!p)return;
+  /* Put the tiny message just above the telescope, as if the voice is coming
+     from inside its optical tube. */
+  el.style.left=Math.round(p[0])+'px';
+  el.style.top=Math.round(p[1]-12)+'px';
 }
 function drawPulses(now,age){
   if(reduce||age<4||SW)return;
@@ -1451,11 +1451,11 @@ function frame(now){
   g.clearRect(0,0,W,H);
   drawDistantGalaxies(now);
   drawFloatingTelescope(now);
+  if($('#secret-msg').classList.contains('on'))placeSecretMsg();
   drawBg(now);drawShooting(now);
   CONS.forEach(function(c){drawCons(c,age,now);});
   drawPulses(now,age);
   CONS.forEach(function(c){drawStars(c,age,now);});
-  drawSecretStar(now,age);
   drawTriggerVisuals(now);
   drawSupernovaBursts(now);
   /* Isolate late-stage canvas effects so one mobile/WebView compatibility
@@ -1608,12 +1608,6 @@ function bhGrabRadius(){
   var base=Math.min(W,H);
   return Math.max(155,Math.min(base*.30,Math.max(BH.R*10,190)));
 }
-function secretScreenPos(){
-  if(!secretStar)return null;
-  var v=cons('virgo');
-  var q=lens(secretStar.x+v.ox,secretStar.y+v.oy);
-  return q ? [q[0],q[1]] : [secretStar.x+v.ox,secretStar.y+v.oy];
-}
 function constellationTargetAt(x,y){
   var found=false;
   CONS.forEach(function(c){
@@ -1624,8 +1618,8 @@ function constellationTargetAt(x,y){
       if(d<Math.max(14,s.r*4.5))found=true;
     });
   });
-  var sp=secretScreenPos();
-  if(sp&&Math.hypot(x-sp[0],y-sp[1])<20)found=true;
+  var tp=telescopeScreenPos();
+  if(tp&&Math.hypot(x-tp[0],y-tp[1])<24)found=true;
   return found;
 }
 function beginBHDrag(e){
@@ -1724,11 +1718,12 @@ $('#bh-clock').addEventListener('pointerdown',function(e){
   }
 },{passive:true});
 document.addEventListener('pointerdown',function(e){
-  if(!secretStar||SW)return;
-  var sp=secretScreenPos();
-  if(sp&&Math.hypot(e.clientX-sp[0],e.clientY-sp[1])<20){
+  if(SW)return;
+  var tp=telescopeScreenPos();
+  if(tp&&Math.hypot(e.clientX-tp[0],e.clientY-tp[1])<24){
     e.stopPropagation();
     haptic(8);showSecretSequence();
+    placeSecretMsg();
   }
 },{passive:true});
 
