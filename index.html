@@ -53,7 +53,7 @@ footer nav a{display:grid;place-items:center;width:44px;height:44px;border-radiu
 footer nav a:hover,footer nav a:focus-visible{color:#6ee5ff;border-color:rgba(110,229,255,.75);background:rgba(110,229,255,.1)}
 footer nav svg{width:20px;height:20px;display:block}
 .quote{margin:2px 0 0;font-size:11px;font-style:italic;letter-spacing:.04em;color:rgba(184,198,214,.45)}
-.cap{position:fixed;left:0;top:0;z-index:3;font-size:10px;letter-spacing:.5em;text-transform:uppercase;color:rgba(184,198,214,.42);pointer-events:none;white-space:nowrap}
+.cap{display:none;position:fixed;left:0;top:0;z-index:3;font-size:10px;letter-spacing:.5em;text-transform:uppercase;color:rgba(184,198,214,.42);pointer-events:none;white-space:nowrap}
 #bh-clock{position:fixed;left:0;top:0;z-index:3;font:500 10px/1 'Space Grotesk',system-ui,sans-serif;letter-spacing:.14em;color:rgba(196,226,240,.62);pointer-events:none;white-space:nowrap;text-shadow:0 0 8px rgba(110,229,255,.18);text-transform:uppercase}
 #bh-clock .clock-time{font:600 13px/1 'Courier New',monospace;letter-spacing:.08em;color:#6ee5ff;text-shadow:0 0 8px rgba(110,229,255,.3)}
 #bh-clock .clock-sep{opacity:.35;padding:0 5px}
@@ -528,8 +528,38 @@ function drawStars(c,age,now){
       g.beginPath();g.moveTo(x-r*4.2,y);g.lineTo(x+r*4.2,y);g.moveTo(x,y-r*4.2);g.lineTo(x,y+r*4.2);g.stroke();
     }
     if(s.name&&age>3.5&&kq<.25){
-      g.font='300 10px "Space Grotesk",system-ui,sans-serif';g.fillStyle='rgba(184,198,214,'+(.55*clamp((age-3.5)/1))+')';
-      g.textAlign=s.nx<0?'right':'left';g.fillText(s.name,x+s.nx*(r*3.4+6),y+3+(s.dy||0));
+      /* Audio-trigger labels: each one inherits its own pulse color. */
+      var triggerKey=(k==='betel'?'betel':(k==='rigel'?'rigel':(k==='spica'?'spica':null)));
+      var tr=triggerKey?TRIGGERS[triggerKey]:null;
+      var isPlaying=!!(tr&&activeSfx===SFX[triggerKey]&&!SFX[triggerKey].paused);
+      g.font='500 10px "Space Grotesk",system-ui,sans-serif';
+      g.textAlign=s.nx<0?'right':'left';
+      var labelX=x+s.nx*(r*3.4+7), labelY=y+3+(s.dy||0);
+      var labelAlpha=isPlaying?.95:.62;
+      g.fillStyle=tr?'rgba('+tr.rgb+','+labelAlpha+')':'rgba(184,198,214,'+labelAlpha+')';
+      g.fillText(s.name,labelX,labelY);
+
+      /*
+       * Mini spectrum:
+       * - only visible while its own audio is actually PLAYING
+       * - always sits outside the label with a clear gap
+       * - Spica points left; Betelgeuse/Rigel point right
+       */
+      if(tr&&isPlaying){
+        var bars=9, gap=2.2, bw=1.45, total=bars*bw+(bars-1)*gap;
+        var sx=(s.nx<0)?(labelX-total-11):(labelX+11);
+        var sy=labelY-7;
+        g.save();g.globalCompositeOperation='lighter';
+        for(var bi=0;bi<bars;bi++){
+          var wave=.5+.5*Math.sin(now*.009+bi*1.17+s.ph);
+          var center=1-Math.abs((bi-(bars-1)/2)/((bars-1)/2));
+          var bhh=2.5+8.5*wave*(.35+.65*center);
+          var ba=.38+.52*wave;
+          g.fillStyle='rgba('+tr.rgb+','+ba+')';
+          g.fillRect(sx+bi*(bw+gap),sy+6-bhh,bw,bhh);
+        }
+        g.restore();
+      }
     }
   });
 }
