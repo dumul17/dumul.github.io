@@ -112,7 +112,7 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 
 @media (prefers-reduced-motion:reduce){h1.gl .big,h1.gl .kicker{animation-duration:.01s}}
 </style>
-<meta name="gimmick-revision" content="v28: v27 baseline + Gargantua audio spectrum visualizer; audio-reactive ring only while Betelgeuse/Rigel/Spica plays">
+<meta name="gimmick-revision" content="v29: v27 baseline + Gargantua audio spectrum visualizer; audio-reactive ring only while Betelgeuse/Rigel/Spica plays">
 </head>
 <body data-gimmick-baseline="v25" data-gimmick-revision="v27-performance-robustness">
 <canvas id="sky" aria-hidden="true"></canvas>
@@ -211,7 +211,7 @@ var activeSfx=null;
    The visualizer taps the currently playing star SFX through Web Audio.
    It never owns playback state: pause/stop simply makes the spectrum decay
    back to the normal Gargantua ring. */
-var AV={ctx:null,an:null,sources:{},data:null,ready:false,level:0,bass:0,mid:0,high:0,beat:0,peak:0,glitchUntil:0,last:0};
+var AV={ctx:null,an:null,sources:{},data:null,ready:false,level:0,bass:0,mid:0,high:0,beat:0,peak:0,glitchUntil:0,last:0,skip:0};
 function audioVizInit(a){
   if(!a)return false;
   try{
@@ -220,8 +220,8 @@ function audioVizInit(a){
     if(!AV.ctx){
       AV.ctx=new AC();
       AV.an=AV.ctx.createAnalyser();
-      AV.an.fftSize=256;
-      AV.an.smoothingTimeConstant=.78;
+      AV.an.fftSize=64;
+      AV.an.smoothingTimeConstant=.82;
       AV.an.minDecibels=-90;
       AV.an.maxDecibels=-12;
       AV.data=new Uint8Array(AV.an.frequencyBinCount);
@@ -230,95 +230,105 @@ function audioVizInit(a){
     var key=SFX.rigel===a?'rigel':(SFX.spica===a?'spica':(SFX.betel===a?'betel':null));
     if(!key)return false;
     if(!AV.sources[key]){
-      var src=AV.ctx.createMediaElementSource(a);
-      src.connect(AV.an);
-      AV.sources[key]=src;
+      try{
+        var src=AV.ctx.createMediaElementSource(a);
+        src.connect(AV.an);
+        AV.sources[key]=src;
+      }catch(srcErr){
+        /* Some social-media WebViews reject MediaElementSource for local media.
+           Never let that exception reach the render loop; playback stays native. */
+        AV.ready=false;
+        return false;
+      }
     }
     AV.ready=true;
     if(AV.ctx.state==='suspended'){
       var rp=AV.ctx.resume();if(rp&&rp.catch)rp.catch(function(){});
     }
     return true;
-  }catch(e){return false;}
+  }catch(e){
+    AV.ready=false;
+    return false;
+  }
 }
 function audioVizOff(){
   AV.level=0;AV.bass=0;AV.mid=0;AV.high=0;AV.beat=0;AV.peak=0;AV.glitchUntil=0;
 }
 function updateAudioViz(now){
   if(!AV.ready||!AV.an||!activeSfx||activeSfx.paused||activeSfx.ended){audioVizOff();return;}
+  /* Mobile/WebView optimization: analyse every other frame. The visualizer
+     remains responsive while cutting Web Audio array work roughly in half. */
+  AV.skip^=1;if(AV.skip){AV.beat*=.93;return;}
   try{
     AV.an.getByteFrequencyData(AV.data);
-    var n=AV.data.length,sum=0,bass=0,mid=0,high=0;
+    var n=AV.data.length,bn=Math.max(1,Math.floor(n*.16)),mn=Math.max(bn+1,Math.floor(n*.42));
+    var sum=0,bass=0,mid=0,high=0;
     for(var i=0;i<n;i++){
-      var v=AV.data[i]/255;
-      sum+=v;
-      if(i<8)bass+=v;
-      else if(i<30)mid+=v;
+      var v=AV.data[i]/255;sum+=v;
+      if(i<bn)bass+=v;
+      else if(i<mn)mid+=v;
       else high+=v;
     }
-    bass/=8;mid/=22;high/=Math.max(1,n-30);
+    bass/=bn;mid/=Math.max(1,mn-bn);high/=Math.max(1,n-mn);
     var level=sum/n;
-    AV.bass+=(bass-AV.bass)*.28;
-    AV.mid+=(mid-AV.mid)*.22;
-    AV.high+=(high-AV.high)*.18;
-    AV.level+=(level-AV.level)*.24;
-    var pulse=AV.bass*.72+AV.mid*.28;
-    var rising=pulse-AV.peak;
+    AV.bass+=(bass-AV.bass)*.30;
+    AV.mid+=(mid-AV.mid)*.23;
+    AV.high+=(high-AV.high)*.19;
+    AV.level+=(level-AV.level)*.26;
+    var pulse=AV.bass*.72+AV.mid*.28,rising=pulse-AV.peak;
     AV.peak+=(pulse-AV.peak)*.055;
-    if(rising>.045&&pulse>.16){AV.beat=Math.min(1,AV.beat+.72);AV.glitchUntil=now+(Math.random()<.24?90:0);}
+    if(rising>.045&&pulse>.16){AV.beat=Math.min(1,AV.beat+.72);AV.glitchUntil=now+(Math.random()<.20?80:0);}
     else AV.beat*=.88;
   }catch(e){audioVizOff();}
 }
 function drawAudioVisualizer(now,R){
   if(reduce||!AV.ready||!activeSfx||activeSfx.paused||activeSfx.ended||AV.level<.008)return;
-  var beat=AV.beat,lv=AV.level,b=AV.bass,m=AV.mid,h=AV.high;
-  var glitch=now<AV.glitchUntil;
-  var N=96;
-  g.save();g.globalCompositeOperation='lighter';
-  for(var layer=0;layer<3;layer++){
-    var pts=[];
-    for(var i=0;i<=N;i++){
-      var u=i/N,ang=u*6.283;
-      var bin=Math.min(AV.data.length-1,Math.floor(u*(AV.data.length-1)*.92));
-      var fv=AV.data[bin]/255;
-      var low=AV.data[Math.min(7,bin)]/255;
-      var wob=Math.sin(ang*3+now*.0024+layer*1.7)*(.018+.035*b);
-      wob+=Math.sin(ang*7-now*.0017-layer)*(.012+.025*m);
-      var spike=fv*(.55+.45*Math.sin(ang*2+layer));
-      var amp=R*(.035+.13*lv+.20*spike+.10*b+.055*m);
-      if(layer===1)amp*=1.18;
-      if(layer===2)amp*=.72;
-      var rr=R*(1.075+layer*.105)+amp*(1+wob);
-      var distort=Math.sin(ang*5-now*.0012+layer)*R*(.012+.022*lv);
-      if(glitch&&i%7===0)distort+=(Math.random()-.5)*R*.34;
-      rr+=distort;
-      pts.push([Math.cos(ang)*rr,Math.sin(ang)*rr]);
+  try{
+    var beat=AV.beat,lv=AV.level,b=AV.bass,m=AV.mid,h=AV.high;
+    var glitch=now<AV.glitchUntil,N=52,data=AV.data,n=data.length;
+    g.save();g.globalCompositeOperation='lighter';
+    /* Three lightweight radial traces. Draw directly into the path instead of
+       allocating a point array every frame; this matters on Android WebViews. */
+    for(var layer=0;layer<3;layer++){
+      var rgb=layer===0?'110,229,255':(layer===1?'190,105,255':'255,43,214');
+      g.strokeStyle='rgba('+rgb+','+((.22+.28*lv+.18*beat)/(layer+1))+')';
+      g.lineWidth=layer===0?Math.max(.7,R*.018):Math.max(.45,R*.011);
+      if(glitch&&layer===1)g.setLineDash([2,4]);
+      g.beginPath();
+      for(var i=0;i<=N;i++){
+        var u=i/N,ang=u*6.283;
+        var bin=Math.min(n-1,Math.floor(u*(n-1)*.92));
+        var fv=data[bin]/255;
+        var wob=Math.sin(ang*3+now*.0024+layer*1.7)*(.018+.035*b);
+        wob+=Math.sin(ang*7-now*.0017-layer)*(.012+.025*m);
+        var spike=fv*(.55+.45*Math.sin(ang*2+layer));
+        var amp=R*(.035+.13*lv+.20*spike+.10*b+.055*m);
+        if(layer===1)amp*=1.18;if(layer===2)amp*=.72;
+        var rr=R*(1.075+layer*.105)+amp*(1+wob);
+        rr+=Math.sin(ang*5-now*.0012+layer)*R*(.012+.022*lv);
+        if(glitch&&i%9===0)rr+=(Math.random()-.5)*R*.28;
+        var x=Math.cos(ang)*rr,y=Math.sin(ang)*rr;
+        if(i===0)g.moveTo(x,y);else g.lineTo(x,y);
+      }
+      g.closePath();g.stroke();g.setLineDash([]);
     }
-    var rgb=layer===0?'110,229,255':(layer===1?'190,105,255':'255,43,214');
-    g.strokeStyle='rgba('+rgb+','+((.22+.28*lv+.18*beat)/(layer+1))+')';
-    g.lineWidth=layer===0?Math.max(.7,R*.018):Math.max(.45,R*.011);
-    if(glitch&&layer===1)g.setLineDash([2,4]);
-    g.beginPath();
-    for(var j=0;j<pts.length;j++){
-      var p=pts[j];if(j===0)g.moveTo(p[0],p[1]);else g.lineTo(p[0],p[1]);
+    if(beat>.08){
+      var shock=R*(1.055+.14*beat);
+      g.strokeStyle='rgba(235,245,255,'+(.08+.24*beat)+')';
+      g.lineWidth=Math.max(.7,R*(.018+.018*beat));
+      g.beginPath();g.arc(0,0,shock,0,6.283);g.stroke();
     }
-    g.closePath();g.stroke();g.setLineDash([]);
-  }
-  /* Beat hit: a short, asymmetric shock around the Einstein ring. */
-  if(beat>.08){
-    var shock=R*(1.055+.14*beat),sa=.08+.26*beat;
-    g.strokeStyle='rgba(235,245,255,'+sa+')';g.lineWidth=Math.max(.7,R*(.018+.018*beat));
-    g.beginPath();g.arc(0,0,shock,0,6.283);g.stroke();
-  }
-  /* Sparse digital tears: intentionally brief, never enough to obscure the hole. */
-  if(glitch){
-    for(var q=0;q<5;q++){
-      var ga=(Math.random()*2-1)*Math.PI,gd=R*(1.1+Math.random()*1.5),gl=R*(.25+Math.random()*1.2);
-      g.strokeStyle='rgba('+(q%2?'110,229,255':'255,43,214')+','+(.12+Math.random()*.22)+')';
-      g.lineWidth=.7+Math.random()*1.2;g.beginPath();g.moveTo(Math.cos(ga)*gd,Math.sin(ga)*gd);g.lineTo(Math.cos(ga)* (gd+gl),Math.sin(ga)*(gd+gl));g.stroke();
+    if(glitch){
+      for(var q=0;q<3;q++){
+        var ga=(Math.random()*2-1)*Math.PI,gd=R*(1.1+Math.random()*1.5),gl=R*(.25+Math.random()*.9);
+        g.strokeStyle='rgba('+(q%2?'110,229,255':'255,43,214')+','+(.10+Math.random()*.18)+')';
+        g.lineWidth=.7+Math.random();g.beginPath();
+        g.moveTo(Math.cos(ga)*gd,Math.sin(ga)*gd);
+        g.lineTo(Math.cos(ga)*(gd+gl),Math.sin(ga)*(gd+gl));g.stroke();
+      }
     }
-  }
-  g.restore();
+    g.restore();
+  }catch(err){/* visualizer failure must never stop the main canvas */}
 }
 function ambTry(){
   if(!activeSfx||activeSfx.paused)safePlay(AMB);
