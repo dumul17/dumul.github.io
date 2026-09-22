@@ -112,7 +112,7 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 
 @media (prefers-reduced-motion:reduce){h1.gl .big,h1.gl .kicker{animation-duration:.01s}}
 </style>
-<meta name="gimmick-revision" content="v27: v26 + pointer hover RAF batching + resize-stable background + defensive audio lifecycle; audio intentionally continues">
+<meta name="gimmick-revision" content="v28: v27 baseline + Gargantua audio spectrum visualizer; audio-reactive ring only while Betelgeuse/Rigel/Spica plays">
 </head>
 <body data-gimmick-baseline="v25" data-gimmick-revision="v27-performance-robustness">
 <canvas id="sky" aria-hidden="true"></canvas>
@@ -207,6 +207,119 @@ function fadeTo(a,vol,ms){
   },40);
 }
 var activeSfx=null;
+/* ---------- audio spectrum visualizer ----------
+   The visualizer taps the currently playing star SFX through Web Audio.
+   It never owns playback state: pause/stop simply makes the spectrum decay
+   back to the normal Gargantua ring. */
+var AV={ctx:null,an:null,sources:{},data:null,ready:false,level:0,bass:0,mid:0,high:0,beat:0,peak:0,glitchUntil:0,last:0};
+function audioVizInit(a){
+  if(!a)return false;
+  try{
+    var AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return false;
+    if(!AV.ctx){
+      AV.ctx=new AC();
+      AV.an=AV.ctx.createAnalyser();
+      AV.an.fftSize=256;
+      AV.an.smoothingTimeConstant=.78;
+      AV.an.minDecibels=-90;
+      AV.an.maxDecibels=-12;
+      AV.data=new Uint8Array(AV.an.frequencyBinCount);
+      AV.an.connect(AV.ctx.destination);
+    }
+    var key=SFX.rigel===a?'rigel':(SFX.spica===a?'spica':(SFX.betel===a?'betel':null));
+    if(!key)return false;
+    if(!AV.sources[key]){
+      var src=AV.ctx.createMediaElementSource(a);
+      src.connect(AV.an);
+      AV.sources[key]=src;
+    }
+    AV.ready=true;
+    if(AV.ctx.state==='suspended'){
+      var rp=AV.ctx.resume();if(rp&&rp.catch)rp.catch(function(){});
+    }
+    return true;
+  }catch(e){return false;}
+}
+function audioVizOff(){
+  AV.level=0;AV.bass=0;AV.mid=0;AV.high=0;AV.beat=0;AV.peak=0;AV.glitchUntil=0;
+}
+function updateAudioViz(now){
+  if(!AV.ready||!AV.an||!activeSfx||activeSfx.paused||activeSfx.ended){audioVizOff();return;}
+  try{
+    AV.an.getByteFrequencyData(AV.data);
+    var n=AV.data.length,sum=0,bass=0,mid=0,high=0;
+    for(var i=0;i<n;i++){
+      var v=AV.data[i]/255;
+      sum+=v;
+      if(i<8)bass+=v;
+      else if(i<30)mid+=v;
+      else high+=v;
+    }
+    bass/=8;mid/=22;high/=Math.max(1,n-30);
+    var level=sum/n;
+    AV.bass+=(bass-AV.bass)*.28;
+    AV.mid+=(mid-AV.mid)*.22;
+    AV.high+=(high-AV.high)*.18;
+    AV.level+=(level-AV.level)*.24;
+    var pulse=AV.bass*.72+AV.mid*.28;
+    var rising=pulse-AV.peak;
+    AV.peak+=(pulse-AV.peak)*.055;
+    if(rising>.045&&pulse>.16){AV.beat=Math.min(1,AV.beat+.72);AV.glitchUntil=now+(Math.random()<.24?90:0);}
+    else AV.beat*=.88;
+  }catch(e){audioVizOff();}
+}
+function drawAudioVisualizer(now,R){
+  if(reduce||!AV.ready||!activeSfx||activeSfx.paused||activeSfx.ended||AV.level<.008)return;
+  var beat=AV.beat,lv=AV.level,b=AV.bass,m=AV.mid,h=AV.high;
+  var glitch=now<AV.glitchUntil;
+  var N=96;
+  g.save();g.globalCompositeOperation='lighter';
+  for(var layer=0;layer<3;layer++){
+    var pts=[];
+    for(var i=0;i<=N;i++){
+      var u=i/N,ang=u*6.283;
+      var bin=Math.min(AV.data.length-1,Math.floor(u*(AV.data.length-1)*.92));
+      var fv=AV.data[bin]/255;
+      var low=AV.data[Math.min(7,bin)]/255;
+      var wob=Math.sin(ang*3+now*.0024+layer*1.7)*(.018+.035*b);
+      wob+=Math.sin(ang*7-now*.0017-layer)*(.012+.025*m);
+      var spike=fv*(.55+.45*Math.sin(ang*2+layer));
+      var amp=R*(.035+.13*lv+.20*spike+.10*b+.055*m);
+      if(layer===1)amp*=1.18;
+      if(layer===2)amp*=.72;
+      var rr=R*(1.075+layer*.105)+amp*(1+wob);
+      var distort=Math.sin(ang*5-now*.0012+layer)*R*(.012+.022*lv);
+      if(glitch&&i%7===0)distort+=(Math.random()-.5)*R*.34;
+      rr+=distort;
+      pts.push([Math.cos(ang)*rr,Math.sin(ang)*rr]);
+    }
+    var rgb=layer===0?'110,229,255':(layer===1?'190,105,255':'255,43,214');
+    g.strokeStyle='rgba('+rgb+','+((.22+.28*lv+.18*beat)/(layer+1))+')';
+    g.lineWidth=layer===0?Math.max(.7,R*.018):Math.max(.45,R*.011);
+    if(glitch&&layer===1)g.setLineDash([2,4]);
+    g.beginPath();
+    for(var j=0;j<pts.length;j++){
+      var p=pts[j];if(j===0)g.moveTo(p[0],p[1]);else g.lineTo(p[0],p[1]);
+    }
+    g.closePath();g.stroke();g.setLineDash([]);
+  }
+  /* Beat hit: a short, asymmetric shock around the Einstein ring. */
+  if(beat>.08){
+    var shock=R*(1.055+.14*beat),sa=.08+.26*beat;
+    g.strokeStyle='rgba(235,245,255,'+sa+')';g.lineWidth=Math.max(.7,R*(.018+.018*beat));
+    g.beginPath();g.arc(0,0,shock,0,6.283);g.stroke();
+  }
+  /* Sparse digital tears: intentionally brief, never enough to obscure the hole. */
+  if(glitch){
+    for(var q=0;q<5;q++){
+      var ga=(Math.random()*2-1)*Math.PI,gd=R*(1.1+Math.random()*1.5),gl=R*(.25+Math.random()*1.2);
+      g.strokeStyle='rgba('+(q%2?'110,229,255':'255,43,214')+','+(.12+Math.random()*.22)+')';
+      g.lineWidth=.7+Math.random()*1.2;g.beginPath();g.moveTo(Math.cos(ga)*gd,Math.sin(ga)*gd);g.lineTo(Math.cos(ga)* (gd+gl),Math.sin(ga)*(gd+gl));g.stroke();
+    }
+  }
+  g.restore();
+}
 function ambTry(){
   if(!activeSfx||activeSfx.paused)safePlay(AMB);
 }
@@ -215,9 +328,11 @@ function playSfx(a){
   if(activeSfx===a){
     if(a.paused){
       safePause(AMB);
+      audioVizInit(a);
       safePlay(a);
     }else{
       safePause(a);
+      audioVizOff();
       AMB.volume=.5;
       ambTry();
     }
@@ -229,11 +344,13 @@ function playSfx(a){
     safeReset(activeSfx);
   }
   activeSfx=a;
+  audioVizInit(a);
   /* Install exactly one lifecycle handler for the active SFX. */
   a.onended=null;
   a.onended=function(){
     if(activeSfx===a){
       activeSfx=null;
+      audioVizOff();
       AMB.volume=.5;
       ambTry();
     }
@@ -610,6 +727,11 @@ function drawHole(now,age){
   g.globalAlpha=Math.min(1,.86+.14*BH.h+.5*e);
   g.drawImage(BH.sprite,-S/2,-S/2,S,S);
   g.globalAlpha=1;
+
+  /* Audio-reactive Gargantua ring. The black hole core and drag physics are
+     untouched; this is a visual layer drawn on top of the normal ring only
+     while one of Betelgeuse/Rigel/Spica SFX is actively playing. */
+  drawAudioVisualizer(now,R);
 
   /*
    * Animated gravitational pulse rings.
@@ -1245,6 +1367,7 @@ function frame(now){
   var age=reduce?99:(now-START)/1000;
   if(SW)swP=clamp((now-SW.t0)/SW.dur);
   mouse.x+=(mouse.tx-mouse.x)*.05;mouse.y+=(mouse.ty-mouse.y)*.05;
+  updateAudioViz(now);
   if(mouse.px!=null&&!drag.on)updateHover(mouse.px,mouse.py);
   if(!drag.on&&(Math.abs(BH.x-BH.hx)>.05||Math.abs(BH.y-BH.hy)>.05)){
     BH.x+=(BH.hx-BH.x)*.065;BH.y+=(BH.hy-BH.y)*.065;
