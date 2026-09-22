@@ -54,8 +54,14 @@ footer nav a:hover,footer nav a:focus-visible{color:#6ee5ff;border-color:rgba(11
 footer nav svg{width:20px;height:20px;display:block}
 .quote{margin:2px 0 0;font-size:11px;font-style:italic;letter-spacing:.04em;color:rgba(184,198,214,.45)}
 .cap{position:fixed;left:0;top:0;z-index:3;font-size:10px;letter-spacing:.5em;text-transform:uppercase;color:rgba(184,198,214,.42);pointer-events:none;white-space:nowrap}
-#bh-clock{position:fixed;left:0;top:0;z-index:3;font:300 13px/1 'Space Grotesk',system-ui,sans-serif;letter-spacing:.1em;color:rgba(196,226,240,.5);pointer-events:none;white-space:nowrap;text-shadow:0 0 10px rgba(110,229,255,.2)}
-.portal,.hit{position:fixed;left:0;top:0;z-index:4}
+#bh-clock{position:fixed;left:0;top:0;z-index:3;font:500 10px/1 'Space Grotesk',system-ui,sans-serif;letter-spacing:.14em;color:rgba(196,226,240,.62);pointer-events:none;white-space:nowrap;text-shadow:0 0 8px rgba(110,229,255,.18);text-transform:uppercase}
+#bh-clock .clock-time{font:600 13px/1 'Courier New',monospace;letter-spacing:.08em;color:#6ee5ff;text-shadow:0 0 8px rgba(110,229,255,.3)}
+#bh-clock .clock-sep{opacity:.35;padding:0 5px}
+#betel-fx{position:fixed;left:0;top:0;z-index:4;width:52px;height:52px;margin:-26px 0 0 -26px;border:0;border-radius:50%;padding:0;background:transparent;cursor:pointer;outline:none;-webkit-tap-highlight-color:transparent}
+#betel-fx:focus-visible{outline:2px solid #ff7ad9;outline-offset:2px}
+/* visual trigger bintang: ring pulse dirender di canvas, hit area tetap transparan */
+.portal
+,.hit{position:fixed;left:0;top:0;z-index:4}
 .portal{display:block;margin-top:-24px;color:#eaf6ff;text-decoration:none;opacity:0;transition:opacity .9s;will-change:transform}
 .portal.on{opacity:1}
 .portal .lab{display:block;padding:6px 12px;border-left:1px solid rgba(110,229,255,.55);background:linear-gradient(90deg,rgba(6,11,17,.6),transparent)}
@@ -86,6 +92,7 @@ body.sw{pointer-events:none}
 <a id="bh" href="dumul.html" aria-label="Masuk ke DUMUL (lubang hitam Gargantua)" title="Gargantua"></a>
 <span id="bh-clock" aria-hidden="true"></span>
 <button id="rigel-fx" type="button" class="hit" aria-label="Putar suara Rigel"></button>
+<button id="betel-fx" type="button" aria-label="Putar suara Betelgeuse"></button>
 <div id="veil" aria-hidden="true"></div>
 <footer id="footer">
   <nav aria-label="Links">
@@ -106,7 +113,7 @@ var mouse={x:0,y:0,tx:0,ty:0},glitchUntil=0,hot=null;
 var SW=null,swP=0;
 var AMB=mkAudio('constellation.mp3',.5,true);
 var GARG=mkAudio('gargantua.mp3',0,true);
-var SFX={rigel:mkAudio('rigel.mp3',.85,false),spica:mkAudio('spica.mp3',.85,false)};
+var SFX={rigel:mkAudio('rigel.mp3',.85,false),spica:mkAudio('spica.mp3',.85,false),betel:mkAudio('betelgeuse.mp3',.85,false)};
 function mkAudio(name,vol,loop){var a=new Audio(encodeURIComponent(name));a.preload='none';a.loop=!!loop;a.volume=vol;return a;}
 function safePlay(a){var p=a.play();if(p&&p.catch)p.catch(function(){});}
 function fadeTo(a,vol,ms){
@@ -119,12 +126,33 @@ function fadeTo(a,vol,ms){
   },40);
 }
 var activeSfx=null;
-function ambTry(){if(!activeSfx)safePlay(AMB);}
+function ambTry(){
+  if(!activeSfx||activeSfx.paused)safePlay(AMB);
+}
 function playSfx(a){
+  /* Toggle seperti player di dumul.html: pause tidak me-reset posisi. */
+  if(activeSfx===a){
+    if(a.paused){
+      AMB.pause();
+      safePlay(a);
+    }else{
+      a.pause();
+      AMB.volume=.5;
+      ambTry();
+    }
+    return;
+  }
   AMB.pause();
   if(activeSfx&&activeSfx!==a){activeSfx.pause();activeSfx.currentTime=0;}
-  activeSfx=a;a.currentTime=0;safePlay(a);
-  a.onended=function(){if(activeSfx===a){activeSfx=null;AMB.volume=.5;ambTry();}};
+  activeSfx=a;
+  safePlay(a);
+  a.onended=function(){
+    if(activeSfx===a){
+      activeSfx=null;
+      AMB.volume=.5;
+      ambTry();
+    }
+  };
 }
 var BH={x:0,y:0,R:26,Rr:0,h:0,sprite:null,S:0};
 function clamp(v){return v<0?0:v>1?1:v;}
@@ -176,13 +204,27 @@ var PORTALS=[
  {id:'band',cons:'orion',stars:['mintaka','alnilam','alnitak'],from:'mintaka',hit:'alnilam',href:'dumul.html',title:'DUMUL',sub:'music \u00b7 Limerence album',col:'110,229,255',place:'fig-right'},
  {id:'yt',cons:'virgo',stars:['spica'],from:'spica',hit:'spica',href:'https://www.youtube.com/@dumul17',title:'YouTube',sub:'gameplay \u00b7 mods \u00b7 music',col:'255,122,217',place:'star-right',ext:true}
 ];
+var TRIGGERS={
+ betel:{id:'betel',cons:'orion',star:'betel',rgb:'255,72,64'},
+ rigel:{id:'rigel',cons:'orion',star:'rigel',rgb:'74,165,255'},
+ spica:{id:'spica',cons:'virgo',star:'spica',rgb:'235,92,255'}
+};
 function cons(id){for(var i=0;i<CONS.length;i++)if(CONS[i].id===id)return CONS[i];}
 function clockText(){
   var now=new Date(),wib=new Date(now.getTime()+(now.getTimezoneOffset()*60000)+7*3600000);
   var h=wib.getHours(),m=wib.getMinutes();
   return (h<10?'0':'')+h+':'+(m<10?'0':'')+m;
 }
-function tickClock(){var el=$('#bh-clock');if(el)el.textContent=clockText();}
+function tickClock(){
+  var el=$('#bh-clock');
+  if(!el)return;
+  var now=new Date(),wib=new Date(now.getTime()+(now.getTimezoneOffset()*60000)+7*3600000);
+  var days=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  var months=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  var day=days[wib.getDay()],date=wib.getDate(),mon=months[wib.getMonth()];
+  var time=clockText();
+  el.innerHTML='<span>'+day+' '+date+' '+mon+' WIB</span><span class="clock-sep">·</span><span class="clock-time">'+time+'</span>';
+}
 PORTALS.forEach(function(p){
   p.c=cons(p.cons);p.h=0;
   var a=document.createElement('a');a.className='portal';a.href=p.href;
@@ -192,14 +234,18 @@ PORTALS.forEach(function(p){
   if(p.id==='yt'){
     h.href='#';h.setAttribute('aria-label','Putar suara Spica');
     h.addEventListener('click',function(e){e.preventDefault();playSfx(SFX.spica);});
+    h.addEventListener('mouseenter',function(){hot='spica';a.classList.add('hot');});
+    h.addEventListener('mouseleave',function(){if(hot==='spica')hot=null;a.classList.remove('hot');});
+    h.addEventListener('focus',function(){hot='spica';});
+    h.addEventListener('blur',function(){if(hot==='spica')hot=null;});
   }else{
     h.href=p.href;if(p.ext){a.target=h.target='_blank';a.rel=h.rel='noopener';}
   }
   [a,h].forEach(function(el){
-    el.addEventListener('mouseenter',function(){hot=p.id;a.classList.add('hot');});
-    el.addEventListener('mouseleave',function(){if(hot===p.id)hot=null;a.classList.remove('hot');});
-    el.addEventListener('focus',function(){hot=p.id;});
-    el.addEventListener('blur',function(){if(hot===p.id)hot=null;});
+    el.addEventListener('mouseenter',function(){hot=p.id==='yt'?'spica':p.id;a.classList.add('hot');});
+    el.addEventListener('mouseleave',function(){var hk=p.id==='yt'?'spica':p.id;if(hot===hk)hot=null;a.classList.remove('hot');});
+    el.addEventListener('focus',function(){hot=p.id==='yt'?'spica':p.id;});
+    el.addEventListener('blur',function(){var hk=p.id==='yt'?'spica':p.id;if(hot===hk)hot=null;});
   });
   document.body.appendChild(h);document.body.appendChild(a);
   p.el=a;p.hitEl=h;
@@ -213,7 +259,7 @@ function fitTitle(){
   while(rg.getBoundingClientRect().width>avail&&size>14&&n++<60){size-=1;big.style.fontSize=size+'px';}
 }
 /* ---------- layout ---------- */
-var BG=[],SS=[],PU=[],nextSS=0,nextPU=0;
+var BG=[],SS=[],PU=[],AST=[],nextSS=0,nextPU=0;
 function layout(){
   if(SW)return;
   W=innerWidth;H=innerHeight;DPR=Math.min(window.devicePixelRatio||1,2);
@@ -235,7 +281,7 @@ function layout(){
     if(c.nebula){c.nebula.x=x0+(c.nebula.rx-c.minx)*sc;c.nebula.y=y0+(c.nebula.ry-c.miny)*sc;}
   });
   var clk=$('#bh-clock'),ft2=$('#footer').getBoundingClientRect();
-  clk.style.transform='translate(calc(14px + env(safe-area-inset-left,0px)),'+Math.round(ft2.top-22)+'px)';
+  clk.style.transform='translate(calc(14px + env(safe-area-inset-left,0px)),'+Math.round(ft2.top-26)+'px)';
   var o=cons('orion'),v=cons('virgo');
   CAPS.orion.style.transform='translate('+Math.round((o.minX+o.maxX)/2-30)+'px,'+Math.round(o.maxY+22)+'px)';
   CAPS.virgo.style.transform='translate('+Math.round(v.maxX-42)+'px,'+Math.round(v.minY-24)+'px)';
@@ -247,6 +293,8 @@ function layout(){
   var rg=cons('orion').stars.rigel,rfx=$('#rigel-fx');
   rfx.style.width=rfx.style.height='52px';rfx.style.marginLeft=rfx.style.marginTop='-26px';
   rfx.style.transform='translate('+Math.round(rg.x)+'px,'+Math.round(rg.y)+'px)';
+  var bt=cons('orion').stars.betel,btx=$('#betel-fx');
+  btx.style.transform='translate('+Math.round(bt.x)+'px,'+Math.round(bt.y)+'px)';
   buildSprite();
   PORTALS.forEach(function(p){
     var s=p.c.stars[p.from];
@@ -260,6 +308,13 @@ function layout(){
   for(var i=0;i<n;i++){
     var big=Math.random()<.07;
     BG.push({x:Math.random()*W,y:Math.random()*H,r:big?1.5:Math.random()*.7+.4,a:Math.random()*.5+.28,s:Math.random()*1.4+.4,p:Math.random()*6.28,d:Math.random()*.9+.1,c:Math.random()<.2?'255,224,190':(Math.random()<.4?'190,225,255':'234,246,255')});
+  }
+  /* sabuk asteroid lokal di sekitar Gargantua: ringan, tidak memenuhi layar */
+  AST=[];
+  var ac=Math.max(18,Math.min(34,Math.round(W*H/18000)));
+  for(var j=0;j<ac;j++){
+    var ang=Math.random()*Math.PI*2,rad=Math.min(W,H)*(.12+Math.random()*.22);
+    AST.push({a:ang,r:rad,e:.72+Math.random()*.28,spd:(.000045+Math.random()*.000075)*(Math.random()<.5?1:-1),sz:.7+Math.random()*2.5,rot:Math.random()*6.28,rs:(Math.random()-.5)*.0018,al:.22+Math.random()*.42,seed:Math.random()*6.28});
   }
 }
 
@@ -391,6 +446,52 @@ function drawShooting(now){
     g.strokeStyle=gr;g.lineWidth=1.4;g.beginPath();g.moveTo(x,y);g.lineTo(x-s.vx*tl,y-s.vy*tl);g.stroke();
   }
 }
+function drawAsteroids(now){
+  if(!AST.length)return;
+  for(var i=0;i<AST.length;i++){
+    var a=AST[i],t=now*a.spd+a.seed,rr=a.r*(1+.035*Math.sin(now*.0007+a.seed));
+    var x=BH.x+Math.cos(t)*rr;
+    var y=BH.y+Math.sin(t)*rr*a.e;
+    /* sedikit perspektif: batu yang lebih dekat tampak lebih besar */
+    var z=.72+.28*(Math.sin(t)+1)/2,sz=a.sz*z;
+    if(SW){var q=pull(x,y),qq=q[2];x=q[0];y=q[1];sz*=1-.55*qq;}
+    var sides=5+(i%4),rot=a.rot+now*a.rs;
+    g.save();g.translate(x,y);g.rotate(rot);g.globalAlpha=a.al*(reduce?1:(.82+.18*Math.sin(now*.001+a.seed)));
+    g.fillStyle='rgba(38,51,61,.9)';g.strokeStyle='rgba(139,177,196,.34)';g.lineWidth=.55;
+    g.beginPath();
+    for(var k=0;k<sides;k++){
+      var aa=k*Math.PI*2/sides,rr2=sz*(.72+.34*Math.sin(k*12.7+a.seed));
+      var px=Math.cos(aa)*rr2,py=Math.sin(aa)*rr2*.72;
+      if(k===0)g.moveTo(px,py);else g.lineTo(px,py);
+    }
+    g.closePath();g.fill();g.stroke();
+    g.fillStyle='rgba(190,220,232,.13)';g.beginPath();g.arc(-sz*.18,-sz*.15,Math.max(.25,sz*.22),0,6.283);g.fill();
+    g.restore();
+  }
+}
+function drawTriggerVisuals(now){
+  Object.keys(TRIGGERS).forEach(function(key){
+    var tr=TRIGGERS[key],c=cons(tr.cons),s=c.stars[tr.star];
+    if(!s||s._a<=0)return;
+    var q=pull(s.x+c.ox,s.y+c.oy),x=q[0],y=q[1],fade=(1-.85*q[2]);
+    var selected=activeSfx===SFX[key];
+    var hovered=hot===key;
+    var pulse=reduce?0.5:(.5+.5*Math.sin(now*.0025+s.ph));
+    var strength=(selected?1:.42)+(hovered?.42:0);
+    var base=s.r*2.5,ring=base+(pulse*7);
+    g.save();g.globalCompositeOperation='lighter';
+    g.strokeStyle='rgba('+tr.rgb+','+(.20*strength*fade)+')';g.lineWidth=.8;g.beginPath();g.arc(x,y,base,0,6.283);g.stroke();
+    g.strokeStyle='rgba('+tr.rgb+','+(.58*strength*fade)+')';g.lineWidth=1.05;g.beginPath();g.arc(x,y,ring,0,6.283);g.stroke();
+    if(selected){
+      var rr=base+12+8*pulse;
+      g.strokeStyle='rgba('+tr.rgb+','+(.30*strength*fade*(1-pulse*.35))+')';g.lineWidth=.8;g.beginPath();g.arc(x,y,rr,0,6.283);g.stroke();
+      g.fillStyle='rgba('+tr.rgb+','+(.10*strength*fade)+')';g.beginPath();g.arc(x,y,rr+3,0,6.283);g.fill();
+    }
+    g.strokeStyle='rgba('+tr.rgb+','+(.55*strength*fade)+')';g.lineWidth=.7;
+    g.beginPath();g.moveTo(x-base-4,y);g.lineTo(x-base+2,y);g.moveTo(x+base-2,y);g.lineTo(x+base+4,y);g.moveTo(x,y-base-4);g.lineTo(x,y-base+2);g.moveTo(x,y+base-2);g.lineTo(x,y+base+4);g.stroke();
+    g.restore();
+  });
+}
 function drawCons(c,age,now){
   var sway=reduce?0:1;
   var ox=Math.sin(now*.00031+c.phase)*3*sway+mouse.x*7,oy=Math.cos(now*.00027+c.phase)*3*sway+mouse.y*5;
@@ -416,7 +517,7 @@ function drawCons(c,age,now){
 function drawStars(c,age,now){
   var k2=W<500?.95:1.2;
   Object.keys(c.stars).forEach(function(k){
-    var s=c.stars[k],a=clamp((age-s.t0)/.5);if(a<=0)return;
+    var s=c.stars[k],a=clamp((age-s.t0)/.5);s._a=a;if(a<=0)return;
     var tw=reduce?1:(.86+.14*Math.sin(now*.002*(1+s.r*.2)+s.ph)),q=pull(s.x+c.ox,s.y+c.oy),x=q[0],y=q[1],kq=q[2],r=s.r*k2*(1-.6*q[2]);a*=(1-.85*kq);
     var gr=g.createRadialGradient(x,y,0,x,y,r*5);
     gr.addColorStop(0,'rgba('+s.rgb+','+(.9*a*tw)+')');gr.addColorStop(.25,'rgba('+s.rgb+','+(.34*a*tw)+')');gr.addColorStop(1,'rgba('+s.rgb+',0)');
@@ -477,6 +578,8 @@ function frame(now){
   CONS.forEach(function(c){drawCons(c,age,now);});
   drawPulses(now,age);
   CONS.forEach(function(c){drawStars(c,age,now);});
+  drawTriggerVisuals(now);
+  drawAsteroids(now);
   drawPortals(age,now);
   drawHole(now,age);
   requestAnimationFrame(frame);
@@ -502,10 +605,20 @@ var rgFx=$('#rigel-fx');
 rgFx.addEventListener('mouseenter',function(){hot='rigel';});
 rgFx.addEventListener('mouseleave',function(){if(hot==='rigel')hot=null;});
 rgFx.addEventListener('click',function(){if(!SW)playSfx(SFX.rigel);});
+
+var btFx=$('#betel-fx');
+btFx.addEventListener('mouseenter',function(){hot='betel';});
+btFx.addEventListener('mouseleave',function(){if(hot==='betel')hot=null;});
+btFx.addEventListener('click',function(){if(!SW)playSfx(SFX.betel);});
+
 window.addEventListener('pageshow',function(e){if(e.persisted)location.reload();});
+
+/* Browser biasanya memblokir autoplay bersuara pada first visit.
+   Coba langsung; kalau ditolak, gesture pertama user akan membuka audio. */
 ambTry();
-document.addEventListener('pointerdown',ambTry,{once:true});
-document.addEventListener('keydown',ambTry,{once:true});
+['pointerdown','touchstart','keydown','click'].forEach(function(ev){
+  document.addEventListener(ev,ambTry,{once:true,passive:true});
+});
 tickClock();setInterval(tickClock,15000);
 var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(layout,120);});
 window.__hub={ready:true};
