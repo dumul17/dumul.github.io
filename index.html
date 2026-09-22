@@ -112,9 +112,9 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 
 @media (prefers-reduced-motion:reduce){h1.gl .big,h1.gl .kicker{animation-duration:.01s}}
 </style>
-<meta name="gimmick-revision" content="v24: mobile Konami banner viewport fix + unified multicolor supernova triggers">
+<meta name="gimmick-revision" content="v27: v26 + pointer hover RAF batching + resize-stable background + defensive audio lifecycle; audio intentionally continues">
 </head>
-<body>
+<body data-gimmick-baseline="v25" data-gimmick-revision="v27-performance-robustness">
 <canvas id="sky" aria-hidden="true"></canvas>
 <div class="scan" aria-hidden="true"></div>
 <header id="header">
@@ -153,7 +153,7 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 var $=function(s){return document.querySelector(s);};
 var cv=$('#sky'),g=cv.getContext('2d');
 var reduce=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
-var W=0,H=0,DPR=1,START=performance.now();
+var W=0,H=0,DPR=1,START=performance.now(),renderRAF=0,pageHidden=false,hiddenAt=0;
 var mouse={x:0,y:0,tx:0,ty:0},glitchUntil=0,hot=null;
 var touchMode=('ontouchstart' in window)||navigator.maxTouchPoints>0;
 var drag={on:false,moved:false,pid:null,x0:0,y0:0,bx:0,by:0};
@@ -165,7 +165,9 @@ var AMB=mkAudio('constellation.mp3',.5,true);
 var GARG=mkAudio('gargantua.mp3',0,true);
 var SFX={rigel:mkAudio('rigel.mp3',.85,false),spica:mkAudio('spica.mp3',.85,false),betel:mkAudio('betelgeuse.mp3',.85,false)};
 function mkAudio(name,vol,loop){var a=new Audio(encodeURIComponent(name));a.preload='none';a.loop=!!loop;a.volume=vol;return a;}
-function safePlay(a){var p=a.play();if(p&&p.catch)p.catch(function(){});}
+function safePlay(a){if(!a)return false;try{var p=a.play();if(p&&p.catch)p.catch(function(){});return true;}catch(e){return false;}}
+function safePause(a){if(!a)return;try{a.pause();}catch(e){}}
+function safeReset(a){if(!a)return;safePause(a);try{a.currentTime=0;}catch(e){}}
 function haptic(ms){
   if(navigator.vibrate)try{navigator.vibrate(ms||10);}catch(e){}
 }
@@ -212,19 +214,23 @@ function playSfx(a){
   /* Toggle seperti player di dumul.html: pause tidak me-reset posisi. */
   if(activeSfx===a){
     if(a.paused){
-      AMB.pause();
+      safePause(AMB);
       safePlay(a);
     }else{
-      a.pause();
+      safePause(a);
       AMB.volume=.5;
       ambTry();
     }
     return;
   }
-  AMB.pause();
-  if(activeSfx&&activeSfx!==a){activeSfx.pause();activeSfx.currentTime=0;}
+  safePause(AMB);
+  if(activeSfx&&activeSfx!==a){
+    activeSfx.onended=null;
+    safeReset(activeSfx);
+  }
   activeSfx=a;
-  safePlay(a);
+  /* Install exactly one lifecycle handler for the active SFX. */
+  a.onended=null;
   a.onended=function(){
     if(activeSfx===a){
       activeSfx=null;
@@ -232,6 +238,7 @@ function playSfx(a){
       ambTry();
     }
   };
+  safePlay(a);
 }
 var BH={x:0,y:0,hx:0,hy:0,R:26,Rr:0,h:0,sprite:null,S:0};
 function clamp(v){return v<0?0:v>1?1:v;}
@@ -343,7 +350,7 @@ function fitTitle(){
   while(rg.getBoundingClientRect().width>avail&&size>14&&n++<60){size-=1;big.style.fontSize=size+'px';}
 }
 /* ---------- layout ---------- */
-var BG=[],SS=[],PU=[],AST=[],GAL=[],nextSS=0,nextPU=0;
+var BG=[],SS=[],PU=[],AST=[],GAL=[],nextSS=0,nextPU=0,bgW=0,bgH=0;
 var TELESCOPE={phase:1.7,init:false,x:0,y:0,vx:0,vy:0,tx:0,ty:0,ang:0,va:0,next:0};
 function layout(){
   if(SW)return;
@@ -393,11 +400,17 @@ function layout(){
     p.ly=s.y;
     var mw=Math.max(96,W-p.lx-12);p.el.style.maxWidth=mw+'px';
   });
-  var n=Math.max(70,Math.min(230,Math.round(W*H/5500)));
-  BG=[];
-  for(var i=0;i<n;i++){
-    var big=Math.random()<.07;
-    BG.push({x:Math.random()*W,y:Math.random()*H,r:big?1.5:Math.random()*.7+.4,a:Math.random()*.5+.28,s:Math.random()*1.4+.4,p:Math.random()*6.28,d:Math.random()*.9+.1,c:Math.random()<.2?'255,224,190':(Math.random()<.4?'190,225,255':'234,246,255')});
+  var bgOrientation=W<H?'portrait':'landscape';
+  var oldOrientation=bgW<bgH?'portrait':'landscape';
+  var rebuildBG=!BG.length||Math.abs(W-bgW)>32||Math.abs(H-bgH)>80||bgOrientation!==oldOrientation;
+  if(rebuildBG){
+    var n=Math.max(70,Math.min(230,Math.round(W*H/5500)));
+    BG=[];
+    for(var i=0;i<n;i++){
+      var big=Math.random()<.07;
+      BG.push({x:Math.random()*W,y:Math.random()*H,r:big?1.5:Math.random()*.7+.4,a:Math.random()*.5+.28,s:Math.random()*1.4+.4,p:Math.random()*6.28,d:Math.random()*.9+.1,c:Math.random()<.2?'255,224,190':(Math.random()<.4?'190,225,255':'234,246,255')});
+    }
+    bgW=W;bgH=H;
   }
   /* sabuk asteroid lokal di sekitar Gargantua: ringan, tidak memenuhi layar */
   AST=[];
@@ -1227,9 +1240,12 @@ function drawPortals(age,now){
   });
 }
 function frame(now){
+  renderRAF=0;
+  if(pageHidden)return;
   var age=reduce?99:(now-START)/1000;
   if(SW)swP=clamp((now-SW.t0)/SW.dur);
   mouse.x+=(mouse.tx-mouse.x)*.05;mouse.y+=(mouse.ty-mouse.y)*.05;
+  if(mouse.px!=null&&!drag.on)updateHover(mouse.px,mouse.py);
   if(!drag.on&&(Math.abs(BH.x-BH.hx)>.05||Math.abs(BH.y-BH.hy)>.05)){
     BH.x+=(BH.hx-BH.x)*.065;BH.y+=(BH.hy-BH.y)*.065;
   }
@@ -1248,8 +1264,36 @@ function frame(now){
   try{drawAsteroids(now);}catch(err){window.__hub.renderError='drawAsteroids: '+(err&&err.message||err);}
   try{drawPortals(age,now);}catch(err){window.__hub.renderError='drawPortals: '+(err&&err.message||err);}
   drawHoleSafe(now,age);
-  requestAnimationFrame(frame);
+  renderRAF=requestAnimationFrame(frame);
 }
+
+function startRenderLoop(){
+  if(pageHidden||renderRAF)return;
+  renderRAF=requestAnimationFrame(frame);
+}
+
+/* Stop only the visual render loop when the tab/page is hidden.
+   Audio is intentionally NOT paused: the browser may choose to suspend
+   background media on its own, but this page never calls pause() here. */
+document.addEventListener('visibilitychange',function(){
+  var now=performance.now();
+  pageHidden=!!document.hidden;
+  if(pageHidden){
+    hiddenAt=now;
+    if(renderRAF){cancelAnimationFrame(renderRAF);renderRAF=0;}
+    return;
+  }
+  var pause=hiddenAt?Math.max(0,now-hiddenAt):0;
+  if(pause){
+    START+=pause;
+    if(SW)SW.t0+=pause;
+    for(var i=0;i<PU.length;i++)PU[i].t+=pause;
+    for(var j=0;j<SN_BURSTS.length;j++)SN_BURSTS[j].t+=pause;
+    if(glitchUntil)glitchUntil+=pause;
+  }
+  hiddenAt=0;
+  startRenderLoop();
+});
 
 function triggerSupernova(key){
   if(SW)return;
@@ -1299,25 +1343,28 @@ function cOrionOffsetY(){return cons('orion').oy||0}
 
 /* ---------- interaksi ---------- */
 if(!reduce)window.addEventListener('pointermove',function(e){
+  mouse.px=e.clientX;mouse.py=e.clientY;
   mouse.tx=(e.clientX/W-.5)*2;mouse.ty=(e.clientY/H-.5)*2;
+},{passive:true});
+function updateHover(px,py){
   if(drag.on)return;
   var hit=null,best=12;
   CONS.forEach(function(c){
     c._hot=-1;
     Object.keys(c.stars).forEach(function(k){
-      var s=c.stars[k],d=Math.hypot(e.clientX-(s.x+c.ox),e.clientY-(s.y+c.oy));
+      var s=c.stars[k],d=Math.hypot(px-(s.x+c.ox),py-(s.y+c.oy));
       if(d<Math.max(10,s.r*3.5)&&d<best){best=d;hit={c:c,star:k};}
     });
     c.lines.forEach(function(l,i){
       var a=c.stars[l[0]],b=c.stars[l[1]],ax=a.x+c.ox,ay=a.y+c.oy,bx=b.x+c.ox,by=b.y+c.oy;
-      var vx=bx-ax,vy=by-ay,den=vx*vx+vy*vy||1,t=Math.max(0,Math.min(1,((e.clientX-ax)*vx+(e.clientY-ay)*vy)/den));
-      var d=Math.hypot(e.clientX-(ax+vx*t),e.clientY-(ay+vy*t));
+      var vx=bx-ax,vy=by-ay,den=vx*vx+vy*vy||1,t=Math.max(0,Math.min(1,((px-ax)*vx+(py-ay)*vy)/den));
+      var d=Math.hypot(px-(ax+vx*t),py-(ay+vy*t));
       if(d<5&&d<best){best=d;hit={c:c,line:i};}
     });
   });
   if(hit){hot=hit.star==='betel'?'betel':(hit.star==='rigel'?'rigel':(hit.star==='spica'?'spica':hot));if(hit.line!=null)hit.c._hot=hit.line;}
   else if(hot!=='bh'&&hot!=='spica'&&hot!=='rigel'&&hot!=='betel')hot=null;
-},{passive:true});
+}
 document.addEventListener('pointerdown',function(e){
   if(SW||drag.on||e.target.closest('#betel-fx,#rigel-fx,#bh,.portal,.hit,#owl-source,#bh-clock'))return;
   var now=performance.now(),hit=null,best=18;
@@ -1498,7 +1545,7 @@ tickClock();setInterval(tickClock,1000);
 var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(layout,120);});
 window.__hub={ready:true};
 if(document.fonts&&document.fonts.addEventListener){document.fonts.addEventListener('loadingdone',function(){if(W)layout();});}
-function boot(){if(W)return;START=performance.now();layout();nextSS=START+5000;requestAnimationFrame(frame);}
+function boot(){if(W)return;START=performance.now();layout();nextSS=START+5000;startRenderLoop();}
 if(document.fonts&&document.fonts.ready){document.fonts.ready.then(boot);setTimeout(function(){if(!W)boot();},1500);}else{boot();}
 })();
 </script>
