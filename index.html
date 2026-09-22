@@ -112,7 +112,7 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 
 @media (prefers-reduced-motion:reduce){h1.gl .big,h1.gl .kicker{animation-duration:.01s}}
 </style>
-<meta name="gimmick-revision" content="v29: v27 baseline + Gargantua audio spectrum visualizer; audio-reactive ring only while Betelgeuse/Rigel/Spica plays">
+<meta name="gimmick-revision" content="v30: v27 baseline + Gargantua audio spectrum visualizer; audio-reactive ring only while Betelgeuse/Rigel/Spica plays">
 </head>
 <body data-gimmick-baseline="v25" data-gimmick-revision="v27-performance-robustness">
 <canvas id="sky" aria-hidden="true"></canvas>
@@ -211,17 +211,23 @@ var activeSfx=null;
    The visualizer taps the currently playing star SFX through Web Audio.
    It never owns playback state: pause/stop simply makes the spectrum decay
    back to the normal Gargantua ring. */
-var AV={ctx:null,an:null,sources:{},data:null,ready:false,level:0,bass:0,mid:0,high:0,beat:0,peak:0,glitchUntil:0,last:0,skip:0};
+var AV={ctx:null,an:null,sources:{},data:null,ready:false,fallback:false,level:0,bass:0,mid:0,high:0,beat:0,peak:0,glitchUntil:0,last:0,skip:0,drawSkip:0,zeroFrames:0};
+/* Instagram/FB in-app browsers can keep native <audio> playback alive while
+   Web Audio analysis competes with the WebView render thread. In those
+   environments use a lightweight currentTime-driven visual fallback instead
+   of createMediaElementSource(). Normal browsers still get real spectrum data. */
+var audioSocialWV=/(Instagram|FBAN|FBAV|FB_IAB|FBIOS|TikTok|Line\/)/i.test(navigator.userAgent||'');
 function audioVizInit(a){
   if(!a)return false;
   try{
     var AC=window.AudioContext||window.webkitAudioContext;
-    if(!AC)return false;
+    if(audioSocialWV||!AC){AV.fallback=true;AV.ready=false;return true;}
+    AV.fallback=false;
     if(!AV.ctx){
       AV.ctx=new AC();
       AV.an=AV.ctx.createAnalyser();
       AV.an.fftSize=64;
-      AV.an.smoothingTimeConstant=.82;
+      AV.an.smoothingTimeConstant=.86;
       AV.an.minDecibels=-90;
       AV.an.maxDecibels=-12;
       AV.data=new Uint8Array(AV.an.frequencyBinCount);
@@ -235,100 +241,112 @@ function audioVizInit(a){
         src.connect(AV.an);
         AV.sources[key]=src;
       }catch(srcErr){
-        /* Some social-media WebViews reject MediaElementSource for local media.
-           Never let that exception reach the render loop; playback stays native. */
-        AV.ready=false;
-        return false;
+        /* Graceful fallback: never let Web Audio failure touch the main canvas. */
+        AV.fallback=true;AV.ready=false;return true;
       }
     }
     AV.ready=true;
     if(AV.ctx.state==='suspended'){
-      var rp=AV.ctx.resume();if(rp&&rp.catch)rp.catch(function(){});
+      var rp=AV.ctx.resume();if(rp&&rp.catch)rp.catch(function(){AV.fallback=true;AV.ready=false;});
     }
     return true;
   }catch(e){
-    AV.ready=false;
-    return false;
+    AV.fallback=true;AV.ready=false;return true;
   }
 }
 function audioVizOff(){
-  AV.level=0;AV.bass=0;AV.mid=0;AV.high=0;AV.beat=0;AV.peak=0;AV.glitchUntil=0;
+  AV.level=0;AV.bass=0;AV.mid=0;AV.high=0;AV.beat=0;AV.peak=0;AV.glitchUntil=0;AV.zeroFrames=0;
 }
 function updateAudioViz(now){
-  if(!AV.ready||!AV.an||!activeSfx||activeSfx.paused||activeSfx.ended){audioVizOff();return;}
-  /* Mobile/WebView optimization: analyse every other frame. The visualizer
-     remains responsive while cutting Web Audio array work roughly in half. */
-  AV.skip^=1;if(AV.skip){AV.beat*=.93;return;}
+  if(!activeSfx||activeSfx.paused||activeSfx.ended){audioVizOff();return;}
+  /* WebView fallback: no Web Audio, no frequency array, essentially free. */
+  if(AV.fallback){
+    var t=activeSfx.currentTime||0;
+    var beatPhase=(t*2.15)%1;
+    var pulse=Math.pow(Math.max(0,1-Math.abs(beatPhase-.16)/.16),2);
+    var slow=.5+.5*Math.sin(t*1.37);
+    AV.bass=.10+.42*pulse+.08*slow;
+    AV.mid=.08+.25*(.5+.5*Math.sin(t*4.7+1.2));
+    AV.high=.06+.18*(.5+.5*Math.sin(t*8.9+2.4));
+    AV.level=.07+.18*pulse+.05*slow;
+    AV.beat=Math.max(0,pulse);
+    if(pulse>.72&&Math.random()<.07)AV.glitchUntil=now+55;
+    return;
+  }
+  if(!AV.ready||!AV.an){audioVizOff();return;}
+  /* Real spectrum: sample every other frame. If the analyser temporarily
+     returns silence, keep a tiny floor instead of killing the visual layer. */
+  AV.skip^=1;if(AV.skip){AV.beat*=.94;return;}
   try{
+    if(AV.ctx&&AV.ctx.state==='suspended'){
+      var rr=AV.ctx.resume();if(rr&&rr.catch)rr.catch(function(){});
+    }
     AV.an.getByteFrequencyData(AV.data);
-    var n=AV.data.length,bn=Math.max(1,Math.floor(n*.16)),mn=Math.max(bn+1,Math.floor(n*.42));
+    var n=AV.data.length,bn=Math.max(1,Math.floor(n*.18)),mn=Math.max(bn+1,Math.floor(n*.50));
     var sum=0,bass=0,mid=0,high=0;
     for(var i=0;i<n;i++){
       var v=AV.data[i]/255;sum+=v;
-      if(i<bn)bass+=v;
-      else if(i<mn)mid+=v;
-      else high+=v;
+      if(i<bn)bass+=v;else if(i<mn)mid+=v;else high+=v;
     }
     bass/=bn;mid/=Math.max(1,mn-bn);high/=Math.max(1,n-mn);
     var level=sum/n;
-    AV.bass+=(bass-AV.bass)*.30;
-    AV.mid+=(mid-AV.mid)*.23;
-    AV.high+=(high-AV.high)*.19;
-    AV.level+=(level-AV.level)*.26;
+    if(level<.004){AV.zeroFrames++;}else AV.zeroFrames=0;
+    /* A silent analyser for several samples can mean a WebView/context issue.
+       Switch to the cheap fallback rather than freezing or vanishing. */
+    if(AV.zeroFrames>18){AV.fallback=true;AV.ready=false;return;}
+    AV.bass+=(Math.max(.035,bass)-AV.bass)*.26;
+    AV.mid+=(Math.max(.025,mid)-AV.mid)*.20;
+    AV.high+=(Math.max(.018,high)-AV.high)*.17;
+    AV.level+=(Math.max(.018,level)-AV.level)*.24;
     var pulse=AV.bass*.72+AV.mid*.28,rising=pulse-AV.peak;
-    AV.peak+=(pulse-AV.peak)*.055;
-    if(rising>.045&&pulse>.16){AV.beat=Math.min(1,AV.beat+.72);AV.glitchUntil=now+(Math.random()<.20?80:0);}
-    else AV.beat*=.88;
-  }catch(e){audioVizOff();}
+    AV.peak+=(pulse-AV.peak)*.08;
+    if(rising>.035&&pulse>.11){AV.beat=Math.min(1,AV.beat+.62);AV.glitchUntil=now+(Math.random()<.15?65:0);}
+    else AV.beat*=.87;
+  }catch(e){AV.fallback=true;AV.ready=false;}
 }
 function drawAudioVisualizer(now,R){
-  if(reduce||!AV.ready||!activeSfx||activeSfx.paused||activeSfx.ended||AV.level<.008)return;
+  if(reduce||!activeSfx||activeSfx.paused||activeSfx.ended)return;
   try{
     var beat=AV.beat,lv=AV.level,b=AV.bass,m=AV.mid,h=AV.high;
-    var glitch=now<AV.glitchUntil,N=52,data=AV.data,n=data.length;
+    var glitch=now<AV.glitchUntil,N=28,data=AV.data,n=data?data.length:0;
+    /* The fallback has no frequency bins, so synthesize a tiny spectral shape
+       from bass/mid/high values. This keeps the Instagram WebView cheap. */
     g.save();g.globalCompositeOperation='lighter';
-    /* Three lightweight radial traces. Draw directly into the path instead of
-       allocating a point array every frame; this matters on Android WebViews. */
-    for(var layer=0;layer<3;layer++){
-      var rgb=layer===0?'110,229,255':(layer===1?'190,105,255':'255,43,214');
-      g.strokeStyle='rgba('+rgb+','+((.22+.28*lv+.18*beat)/(layer+1))+')';
-      g.lineWidth=layer===0?Math.max(.7,R*.018):Math.max(.45,R*.011);
-      if(glitch&&layer===1)g.setLineDash([2,4]);
+    for(var layer=0;layer<2;layer++){
+      var rgb=layer===0?'110,229,255':'210,90,255';
+      g.strokeStyle='rgba('+rgb+','+(.20+.25*lv+.16*beat)+')';
+      g.lineWidth=layer===0?Math.max(.65,R*.017):Math.max(.45,R*.010);
       g.beginPath();
       for(var i=0;i<=N;i++){
         var u=i/N,ang=u*6.283;
-        var bin=Math.min(n-1,Math.floor(u*(n-1)*.92));
-        var fv=data[bin]/255;
-        var wob=Math.sin(ang*3+now*.0024+layer*1.7)*(.018+.035*b);
-        wob+=Math.sin(ang*7-now*.0017-layer)*(.012+.025*m);
-        var spike=fv*(.55+.45*Math.sin(ang*2+layer));
-        var amp=R*(.035+.13*lv+.20*spike+.10*b+.055*m);
-        if(layer===1)amp*=1.18;if(layer===2)amp*=.72;
-        var rr=R*(1.075+layer*.105)+amp*(1+wob);
-        rr+=Math.sin(ang*5-now*.0012+layer)*R*(.012+.022*lv);
-        if(glitch&&i%9===0)rr+=(Math.random()-.5)*R*.28;
+        var fv=n?data[Math.min(n-1,Math.floor(u*(n-1)*.9))]/255:(.35*b+.35*m+.30*h);
+        var wob=Math.sin(ang*3+now*.0022+layer)*(.012+.028*b)+Math.sin(ang*5-now*.0015)*(.010+.018*m);
+        var spike=fv*(.42+.58*Math.abs(Math.sin(ang*2+layer)));
+        var amp=R*(.028+.10*lv+.16*spike+.075*b+.04*m);
+        if(layer===1)amp*=.9;
+        var rr=R*(1.075+layer*.095)+amp*(1+wob);
+        rr+=Math.sin(ang*4-now*.001+layer)*R*(.008+.015*lv);
+        if(glitch&&i%7===0)rr+=(Math.random()-.5)*R*.18;
         var x=Math.cos(ang)*rr,y=Math.sin(ang)*rr;
         if(i===0)g.moveTo(x,y);else g.lineTo(x,y);
       }
-      g.closePath();g.stroke();g.setLineDash([]);
+      g.closePath();g.stroke();
     }
-    if(beat>.08){
-      var shock=R*(1.055+.14*beat);
-      g.strokeStyle='rgba(235,245,255,'+(.08+.24*beat)+')';
-      g.lineWidth=Math.max(.7,R*(.018+.018*beat));
+    if(beat>.12){
+      var shock=R*(1.05+.11*beat);
+      g.strokeStyle='rgba(235,245,255,'+(.07+.20*beat)+')';
+      g.lineWidth=Math.max(.6,R*(.014+.014*beat));
       g.beginPath();g.arc(0,0,shock,0,6.283);g.stroke();
     }
     if(glitch){
-      for(var q=0;q<3;q++){
-        var ga=(Math.random()*2-1)*Math.PI,gd=R*(1.1+Math.random()*1.5),gl=R*(.25+Math.random()*.9);
-        g.strokeStyle='rgba('+(q%2?'110,229,255':'255,43,214')+','+(.10+Math.random()*.18)+')';
-        g.lineWidth=.7+Math.random();g.beginPath();
-        g.moveTo(Math.cos(ga)*gd,Math.sin(ga)*gd);
-        g.lineTo(Math.cos(ga)*(gd+gl),Math.sin(ga)*(gd+gl));g.stroke();
+      for(var q=0;q<2;q++){
+        var ga=(Math.random()*2-1)*Math.PI,gd=R*(1.08+Math.random()*1.25),gl=R*(.20+Math.random()*.65);
+        g.strokeStyle='rgba('+(q?'110,229,255':'255,43,214')+',.18)';
+        g.lineWidth=.7;g.beginPath();g.moveTo(Math.cos(ga)*gd,Math.sin(ga)*gd);g.lineTo(Math.cos(ga)*(gd+gl),Math.sin(ga)*(gd+gl));g.stroke();
       }
     }
     g.restore();
-  }catch(err){/* visualizer failure must never stop the main canvas */}
+  }catch(err){/* Never allow visualizer errors to abort the main canvas. */}
 }
 function ambTry(){
   if(!activeSfx||activeSfx.paused)safePlay(AMB);
