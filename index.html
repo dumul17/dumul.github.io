@@ -1858,10 +1858,7 @@ document.addEventListener('pointerdown',function(e){
 window.addEventListener('pageshow',function(e){if(e.persisted)location.reload();});
 
 /* Ambient ditunda sampai ada star audio yang sudah mulai siap.
-   Tujuannya menghindari kompetisi network/media decode saat first load. */
-['pointerdown','touchstart','keydown','click'].forEach(function(ev){
-  document.addEventListener(ev,ambTry,{once:true,passive:true});
-});
+   Tidak ada first-gesture ambTry: fresh load harus benar-benar tanpa ambient. */
 tickClock();setInterval(tickClock,1000);
 var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(layout,120);});
 window.__hub={ready:true};
