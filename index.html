@@ -112,9 +112,9 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 
 @media (prefers-reduced-motion:reduce){h1.gl .big,h1.gl .kicker{animation-duration:.01s}}
 </style>
-<meta name="gimmick-revision" content="v32: v27 baseline + Gargantua audio spectrum visualizer + dense rings + blur-free breathing ring; telescope easter egg">
+<meta name="gimmick-revision" content="v35: cached background + native-audio lightweight Gargantua visualizer; telescope easter egg">
 </head>
-<body data-gimmick-baseline="v25" data-gimmick-revision="v32-telescope-easter-egg">
+<body data-gimmick-baseline="v25" data-gimmick-revision="v35-native-audio-lightweight-visualizer">
 <canvas id="sky" aria-hidden="true"></canvas>
 <div class="scan" aria-hidden="true"></div>
 <header id="header">
@@ -213,101 +213,31 @@ var activeSfx=null;
    The visualizer taps the currently playing star SFX through Web Audio.
    It never owns playback state: pause/stop simply makes the spectrum decay
    back to the normal Gargantua ring. */
-var AV={ctx:null,an:null,sources:{},data:null,prev:null,ready:false,fallback:false,level:0,bass:0,mid:0,high:0,beat:0,peak:0,glitchUntil:0,avgFlux:0,lastBeatT:0,skip:0};
-/* The analyser path intentionally follows the proven dumul.html recipe:
-   one AudioContext + one AnalyserNode, FFT 1024, smoothed spectrum and a
-   low-frequency spectral-flux beat detector. Playback remains owned by the
-   normal <audio> elements; this layer only observes them. */
+var AV={ctx:null,an:null,sources:{},data:null,prev:null,ready:false,fallback:true,level:0,bass:0,mid:0,high:0,beat:0,peak:0,glitchUntil:0,avgFlux:0,lastBeatT:0,skip:0};
+/* V35: playback stays native <audio>. No AudioContext/MediaElementSource at all.
+   The previous analyser path could leave Android canvas rendering in a bad state
+   while the media element continued playing. The visualizer therefore derives
+   a lightweight, deterministic motion profile from currentTime only. */
 function audioVizInit(a){
   if(!a)return false;
-  /* Potato devices never enter the Web Audio analyser path. Some low-end
-     Android WebViews can keep media playback alive while the Canvas/render
-     thread stalls when createMediaElementSource() is attached. Use the
-     deterministic currentTime fallback instead. */
-  if(IS_POTATO){AV.fallback=true;AV.ready=false;return true;}
-  try{
-    var AC=window.AudioContext||window.webkitAudioContext;
-    if(!AC){AV.fallback=true;AV.ready=false;return true;}
-    if(!AV.ctx){
-      AV.ctx=new AC();
-      AV.an=AV.ctx.createAnalyser();
-      AV.an.fftSize=1024;
-      AV.an.smoothingTimeConstant=.6;
-      AV.an.minDecibels=-90;
-      AV.an.maxDecibels=-12;
-      AV.data=new Uint8Array(AV.an.frequencyBinCount);
-      AV.prev=new Uint8Array(AV.an.frequencyBinCount);
-      AV.an.connect(AV.ctx.destination);
-    }
-    var key=SFX.rigel===a?'rigel':(SFX.spica===a?'spica':(SFX.betel===a?'betel':null));
-    if(!key)return false;
-    if(!AV.sources[key]){
-      try{
-        var src=AV.ctx.createMediaElementSource(a);
-        src.connect(AV.an);
-        AV.sources[key]=src;
-      }catch(srcErr){
-        AV.fallback=true;AV.ready=false;return true;
-      }
-    }
-    AV.fallback=false;
-    AV.ready=true;
-    AV.skip=0;AV.avgFlux=0;AV.lastBeatT=0;
-    if(AV.ctx.state!=='running'&&AV.ctx.resume){
-      var rp=AV.ctx.resume();if(rp&&rp.catch)rp.catch(function(){AV.fallback=true;AV.ready=false;});
-    }
-    return true;
-  }catch(e){AV.fallback=true;AV.ready=false;return true;}
+  AV.fallback=true;AV.ready=false;AV.skip=0;AV.avgFlux=0;AV.lastBeatT=0;
+  return true;
 }
 function audioVizOff(){
   AV.level*=.72;AV.bass*=.72;AV.mid*=.72;AV.high*=.72;AV.beat*=.68;AV.peak*=.9;AV.glitchUntil=0;
 }
 function updateAudioViz(now){
   if(!activeSfx||activeSfx.paused||activeSfx.ended){audioVizOff();return;}
-  if(AV.fallback){
-    /* Lightweight fallback only when Web Audio is genuinely unavailable. */
-    var t=activeSfx.currentTime||0;
-    var ph=(t*2.35)%1;
-    var pulse=Math.pow(Math.max(0,1-Math.abs(ph-.10)/.14),1.7);
-    var swing=.5+.5*Math.sin(t*2.7);
-    AV.bass+=(.10+.58*pulse+.08*swing-AV.bass)*.34;
-    AV.mid+=(.07+.32*(.5+.5*Math.sin(t*7.1+1.2))-AV.mid)*.25;
-    AV.high+=(.04+.22*(.5+.5*Math.sin(t*12.7+2.4))-AV.high)*.22;
-    AV.level+=(Math.max(AV.bass,AV.mid*.8,AV.high*.55)-AV.level)*.28;
-    AV.beat+=(pulse-AV.beat)*.45;
-    if(pulse>.78&&Math.random()<.12)AV.glitchUntil=now+65;
-    return;
-  }
-  if(!AV.ready||!AV.an||!AV.data)return;
-  /* Same sampling/beat strategy as dumul.html, but every other render frame
-     to keep the main canvas cheap on phones. */
-  AV.skip^=1;if(AV.skip){AV.beat*=.94;return;}
-  try{
-    AV.an.getByteFrequencyData(AV.data);
-    var n=AV.data.length,i,e=0,flux=0;
-    for(i=1;i<=8;i++){var d=AV.data[i]-AV.prev[i];if(d>0)flux+=d;}
-    flux/=8*255;
-    AV.avgFlux+=(flux-AV.avgFlux)*.06;
-    if(flux>AV.avgFlux*1.7+.02&&now-AV.lastBeatT>170){
-      AV.lastBeatT=now;AV.beat=1;AV.glitchUntil=now+(Math.random()<.22?70:0);
-    }else AV.beat*=.87;
-    AV.prev.set(AV.data);
-    for(i=1;i<=120&&i<n;i++)e+=AV.data[i];
-    e/=Math.max(1,Math.min(120,n-1))*255;
-    var bn=Math.max(1,Math.floor(Math.min(120,n-1)*.10));
-    var mn=Math.max(bn+1,Math.floor(Math.min(120,n-1)*.48));
-    var bass=0,mid=0,high=0,lim=Math.min(120,n-1);
-    for(i=1;i<=lim;i++){
-      var v=AV.data[i]/255;
-      if(i<=bn)bass+=v;else if(i<=mn)mid+=v;else high+=v;
-    }
-    bass/=bn;mid/=Math.max(1,mn-bn);high/=Math.max(1,lim-mn);
-    AV.bass+=(bass-AV.bass)*.30;
-    AV.mid+=(mid-AV.mid)*.24;
-    AV.high+=(high-AV.high)*.20;
-    AV.level+=(Math.max(0,(e-.12)*2.7)-AV.level)*.30;
-    AV.peak+=(AV.bass-AV.peak)*.10;
-  }catch(e){AV.fallback=true;AV.ready=false;}
+  var t=activeSfx.currentTime||0;
+  var ph=(t*2.35)%1;
+  var pulse=Math.pow(Math.max(0,1-Math.abs(ph-.10)/.14),1.7);
+  var swing=.5+.5*Math.sin(t*2.7);
+  AV.bass+=(.10+.58*pulse+.08*swing-AV.bass)*.34;
+  AV.mid+=(.07+.32*(.5+.5*Math.sin(t*7.1+1.2))-AV.mid)*.25;
+  AV.high+=(.04+.22*(.5+.5*Math.sin(t*12.7+2.4))-AV.high)*.22;
+  AV.level+=(Math.max(AV.bass,AV.mid*.8,AV.high*.55)-AV.level)*.28;
+  AV.beat+=(pulse-AV.beat)*.45;
+  if(pulse>.82)AV.glitchUntil=now+45;
 }
 /* Dense, audio-reactive ripple rings around Gargantua, built for phones:
    - the expensive part (reading the spectrum, walking the circle) runs ONCE
@@ -319,48 +249,36 @@ function updateAudioViz(now){
      to AV.skip, the same cadence the analyser already samples at); audio
      motion is far slower than 60fps so this is invisible but roughly halves
      the per-vertex cost. */
-var AVP={pts:null,N:28,stamp:-1};
-function buildAVProfile(now){
-  var N=AVP.N,pts=AVP.pts;
-  if(!pts||pts.length!==(N+1)*3){pts=AVP.pts=new Float32Array((N+1)*3);}
-  var data=AV.data,n=data?data.length:0,b=AV.bass,m=AV.mid,h=AV.high;
-  for(var j=0;j<=N;j++){
-    var u=j/N,ang=u*6.283,fv;
-    if(n){var uu=Math.abs(u-.5)*2;var bi=1+Math.min(119,n-2,(uu*uu*118)|0);fv=data[bi]/255;}
-    else fv=.45*b+.35*m+.20*h;
-    var wave=.022*Math.sin(ang*3+now*.0018);
-    pts[j*3]=Math.cos(ang);pts[j*3+1]=Math.sin(ang);pts[j*3+2]=fv*(1+wave);
-  }
-  AVP.stamp=AV.skip;
-}
-function strokeReactiveRing(R,base,spread,lv,beat,glitch,rgb,alpha,width){
-  var pts=AVP.pts,N=AVP.N;
-  g.strokeStyle='rgba('+rgb+','+alpha+')';g.lineWidth=Math.max(.7,width);
-  g.beginPath();
-  for(var j=0;j<=N;j++){
-    var fv=pts[j*3+2],amp=R*(.018+.045*lv+.095*fv+spread);
-    var rr=R*base+amp;
-    if(beat>.35)rr+=R*.05*beat;
-    if(glitch&&j%7===0)rr+=(Math.random()-.5)*R*.14;
-    var x=pts[j*3]*rr,y=pts[j*3+1]*rr;
-    if(j===0)g.moveTo(x,y);else g.lineTo(x,y);
-  }
-  g.closePath();g.stroke();
-}
-/* Every "density" ring below reuses the SAME cached point profile (no new
-   sin/cos/pow at all - just a few multiplies per vertex), so going from 2
-   rings to a dozen costs almost nothing extra per frame. This is what makes
-   the moire look from the reference image affordable on a phone. */
-function strokeCheapRing(R,base,growth,lv,beat,rgb,alpha,width){
-  var pts=AVP.pts,N=AVP.N;
-  g.strokeStyle='rgba('+rgb+','+alpha+')';g.lineWidth=width;
-  g.beginPath();
-  for(var j=0;j<=N;j++){
-    var rr=R*base+pts[j*3+2]*growth;
-    var x=pts[j*3]*rr,y=pts[j*3+1]*rr;
-    if(j===0)g.moveTo(x,y);else g.lineTo(x,y);
-  }
-  g.closePath();g.stroke();
+function drawAudioVisualizer(now,R){
+  if(reduce||!activeSfx||activeSfx.paused||activeSfx.ended)return;
+  try{
+    var beat=AV.beat,lv=AV.level,m=AV.mid,h=AV.high;
+    var t=activeSfx.currentTime||0;
+    var glitch=now<AV.glitchUntil;
+    g.save();g.globalCompositeOperation='lighter';
+    /* V35: native arc strokes only. No per-vertex spectrum paths, no cached
+       point arrays, no analyser reads. The ring still breathes with the music. */
+    var count=IS_POTATO?3:5;
+    for(var i=0;i<count;i++){
+      var u=i/Math.max(1,count-1);
+      var rr=R*(1.07+u*(.92+.10*lv)+.018*Math.sin(t*3.2+i));
+      rr+=R*(.035*lv+.055*beat*(1-u));
+      var al=(1-u*.72)*(.16+.14*lv+.10*beat);
+      g.strokeStyle='rgba('+(i%2?'255,70,215':'110,229,255')+','+al+')';
+      g.lineWidth=Math.max(.65,R*(.010-.002*u));
+      g.beginPath();g.arc(0,0,rr,0,6.283);g.stroke();
+    }
+    /* One subtle hero ring carries the strongest beat response. */
+    var hero=R*(1.045+.028*lv+.045*beat);
+    g.strokeStyle='rgba(238,246,250,'+(.34+.22*lv+.18*beat)+')';
+    g.lineWidth=Math.max(.8,R*(.018+.006*beat));
+    g.beginPath();g.arc(0,0,hero,0,6.283);g.stroke();
+    if(!IS_POTATO&&glitch){
+      g.strokeStyle='rgba(255,70,215,.18)';g.lineWidth=.7;
+      g.beginPath();g.arc(0,0,R*(1.32+.06*h),0,6.283);g.stroke();
+    }
+    g.restore();
+  }catch(err){}
 }
 function drawAudioVisualizer(now,R){
   if(reduce||!activeSfx||activeSfx.paused||activeSfx.ended)return;
@@ -1283,11 +1201,8 @@ function drawTriggerVisuals(now){
     g.strokeStyle='rgba('+tr.rgb+','+pa2+')';g.lineWidth=.7;g.beginPath();g.arc(x,y,base+7+11*phase2,0,6.283);g.stroke();
     /* selected audio gives a gentle luminous fill, not a different animation */
     if(selected){
-      var rg=g.createRadialGradient(x,y,0,x,y,outerR+4);
-      rg.addColorStop(0,'rgba('+tr.rgb+','+(.12*strength*fade)+')');
-      rg.addColorStop(.55,'rgba('+tr.rgb+','+(.045*strength*fade)+')');
-      rg.addColorStop(1,'rgba('+tr.rgb+',0)');
-      g.fillStyle=rg;g.beginPath();g.arc(x,y,outerR+4,0,6.283);g.fill();
+      g.fillStyle='rgba('+tr.rgb+','+(.035*strength*fade)+')';
+      g.beginPath();g.arc(x,y,outerR*.72,0,6.283);g.fill();
     }
     g.strokeStyle='rgba('+tr.rgb+','+(.55*strength*fade)+')';g.lineWidth=.7;
     g.beginPath();g.moveTo(x-base-4,y);g.lineTo(x-base+2,y);g.moveTo(x+base-2,y);g.lineTo(x+base+4,y);g.moveTo(x,y-base-4);g.lineTo(x,y-base+2);g.moveTo(x,y+base-2);g.lineTo(x,y+base+4);g.stroke();
