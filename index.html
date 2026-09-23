@@ -404,8 +404,38 @@ function drawAudioVisualizer(now,R){
     g.restore();
   }catch(err){}
 }
-function ambTry(){
-  if(!activeSfx||activeSfx.paused)safePlay(AMB);
+function ambReady(){
+  return AMB.readyState>=3;
+}
+function ambWarmup(){
+  if(AMB._warmStarted)return;
+  AMB._warmStarted=true;
+  try{AMB.preload='auto';AMB.load();}catch(e){}
+}
+function armAmbientWarmup(star){
+  if(AMB._warmStarted)return;
+  if(star.readyState>=3){ambWarmup();return;}
+  var go=function(){
+    star.removeEventListener('canplay',go);
+    star.removeEventListener('canplaythrough',go);
+    if(activeSfx===star&&!star.paused&&!star.ended)ambWarmup();
+  };
+  star.addEventListener('canplay',go);
+  star.addEventListener('canplaythrough',go);
+}
+function resumeAmbientWhenReady(){
+  if(activeSfx&&!activeSfx.paused&&!activeSfx.ended)return;
+  if(ambReady()){safePlay(AMB);return;}
+  if(AMB._resumeWait)return;
+  AMB._resumeWait=true;
+  var go=function(){
+    AMB.removeEventListener('canplay',go);
+    AMB.removeEventListener('canplaythrough',go);
+    AMB._resumeWait=false;
+    if(!activeSfx||activeSfx.paused||activeSfx.ended)safePlay(AMB);
+  };
+  AMB.addEventListener('canplay',go);
+  AMB.addEventListener('canplaythrough',go);
 }
 function playSfx(a){
   /* Toggle seperti player di dumul.html: pause tidak me-reset posisi. */
@@ -414,11 +444,12 @@ function playSfx(a){
       safePause(AMB);
       audioVizInit(a);
       safePlay(a);
+      armAmbientWarmup(a);
     }else{
       safePause(a);
       audioVizOff();
       AMB.volume=.5;
-      ambTry();
+      resumeAmbientWhenReady();
     }
     return;
   }
@@ -436,10 +467,11 @@ function playSfx(a){
       activeSfx=null;
       audioVizOff();
       AMB.volume=.5;
-      ambTry();
+      resumeAmbientWhenReady();
     }
   };
   safePlay(a);
+  armAmbientWarmup(a);
 }
 var BH={x:0,y:0,hx:0,hy:0,R:26,Rr:0,h:0,sprite:null,S:0};
 function clamp(v){return v<0?0:v>1?1:v;}
@@ -1825,9 +1857,8 @@ document.addEventListener('pointerdown',function(e){
 
 window.addEventListener('pageshow',function(e){if(e.persisted)location.reload();});
 
-/* Browser biasanya memblokir autoplay bersuara pada first visit.
-   Coba langsung; kalau ditolak, gesture pertama user akan membuka audio. */
-ambTry();
+/* Ambient ditunda sampai ada star audio yang sudah mulai siap.
+   Tujuannya menghindari kompetisi network/media decode saat first load. */
 ['pointerdown','touchstart','keydown','click'].forEach(function(ev){
   document.addEventListener(ev,ambTry,{once:true,passive:true});
 });
