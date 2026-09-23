@@ -1473,39 +1473,67 @@ function drawPortals(age,now){
     });
   });
 }
+var lastFrameOK=performance.now();
 function frame(now){
   renderRAF=0;
   if(pageHidden)return;
-  var age=reduce?99:(now-START)/1000;
-  if(SW)swP=clamp((now-SW.t0)/SW.dur);
-  mouse.x+=(mouse.tx-mouse.x)*.05;mouse.y+=(mouse.ty-mouse.y)*.05;
-  updateAudioViz(now);
-  if(mouse.px!=null&&!drag.on)updateHover(mouse.px,mouse.py);
-  if(!drag.on&&(Math.abs(BH.x-BH.hx)>.05||Math.abs(BH.y-BH.hy)>.05)){
-    BH.x+=(BH.hx-BH.x)*.065;BH.y+=(BH.hy-BH.y)*.065;
+  /* The whole frame is now one safety net: whatever throws, wherever, the
+     loop always reschedules itself in the finally block below. A single
+     bad frame can no longer freeze the page until a manual reload - at
+     worst you lose one frame and the next one recovers. */
+  try{
+    var age=reduce?99:(now-START)/1000;
+    if(SW)swP=clamp((now-SW.t0)/SW.dur);
+    mouse.x+=(mouse.tx-mouse.x)*.05;mouse.y+=(mouse.ty-mouse.y)*.05;
+    updateAudioViz(now);
+    if(mouse.px!=null&&!drag.on)updateHover(mouse.px,mouse.py);
+    if(!drag.on&&(Math.abs(BH.x-BH.hx)>.05||Math.abs(BH.y-BH.hy)>.05)){
+      BH.x+=(BH.hx-BH.x)*.065;BH.y+=(BH.hy-BH.y)*.065;
+    }
+    g.clearRect(0,0,W,H);
+    if(bgCanvas)g.drawImage(bgCanvas,0,0,W,H);
+    drawFloatingTelescope(now);
+    if($('#secret-msg').classList.contains('on'))placeSecretMsg();
+    drawShooting(now);
+    CONS.forEach(function(c){drawCons(c,age,now);});
+    drawPulses(now,age);
+    CONS.forEach(function(c){drawStars(c,age,now);});
+    drawTriggerVisuals(now);
+    drawSupernovaBursts(now);
+    /* Isolate late-stage canvas effects so one mobile/WebView compatibility
+       issue cannot abort the frame before Gargantua is rendered. */
+    try{drawAsteroids(now);}catch(err){window.__hub.renderError='drawAsteroids: '+(err&&err.message||err);}
+    try{drawPortals(age,now);}catch(err){window.__hub.renderError='drawPortals: '+(err&&err.message||err);}
+    drawHoleSafe(now,age);
+    lastFrameOK=now;
+  }catch(err){
+    window.__hub.renderError='frame: '+(err&&err.message||err);
+    /* If a burst or particle state caused this, clearing it is safer than
+       repeating the same crash every frame forever. */
+    PU.length=0;SN_BURSTS.length=0;
+  }finally{
+    renderRAF=requestAnimationFrame(frame);
   }
-  g.clearRect(0,0,W,H);
-  if(bgCanvas)g.drawImage(bgCanvas,0,0,W,H);
-  drawFloatingTelescope(now);
-  if($('#secret-msg').classList.contains('on'))placeSecretMsg();
-  drawShooting(now);
-  CONS.forEach(function(c){drawCons(c,age,now);});
-  drawPulses(now,age);
-  CONS.forEach(function(c){drawStars(c,age,now);});
-  drawTriggerVisuals(now);
-  drawSupernovaBursts(now);
-  /* Isolate late-stage canvas effects so one mobile/WebView compatibility
-     issue cannot abort the frame before Gargantua is rendered. */
-  try{drawAsteroids(now);}catch(err){window.__hub.renderError='drawAsteroids: '+(err&&err.message||err);}
-  try{drawPortals(age,now);}catch(err){window.__hub.renderError='drawPortals: '+(err&&err.message||err);}
-  drawHoleSafe(now,age);
-  renderRAF=requestAnimationFrame(frame);
 }
 
 function startRenderLoop(){
   if(pageHidden||renderRAF)return;
+  lastFrameOK=performance.now();
   renderRAF=requestAnimationFrame(frame);
 }
+/* Watchdog: if the page is visible but no frame has completed in a while,
+   something stalled the loop (or the whole main thread) harder than the
+   try/catch above can help with. Rebuild the cached Gargantua sprite (in
+   case it or its canvas got into a bad state) and force the loop back on,
+   instead of leaving the screen frozen until the person reloads twice. */
+setInterval(function(){
+  if(pageHidden)return;
+  if(performance.now()-lastFrameOK>1500){
+    try{buildSprite();}catch(e){}
+    renderRAF=0;
+    startRenderLoop();
+  }
+},1000);
 
 /* Stop only the visual render loop when the tab/page is hidden.
    Audio is intentionally NOT paused: the browser may choose to suspend
@@ -1530,11 +1558,20 @@ document.addEventListener('visibilitychange',function(){
   startRenderLoop();
 });
 
+var SN_COOLDOWN={};
 function triggerSupernova(key){
   if(SW)return;
   var tr=TRIGGERS[key],s=tr&&cons(tr.cons).stars[tr.star];
   if(!tr||!s)return;
   playSfx(SFX[key]);haptic(key==='betel'?20:18);
+  /* A burst is a one-shot visual event, not tied to play/pause. Rapid or
+     accidental double-taps on the same star must NOT stack more bursts on
+     top of one still running - that pile-up (more particles every tap,
+     every frame, on top of everything else already drawing) is the most
+     likely cause of a real freeze on a phone. */
+  var t0g=performance.now();
+  if(SN_COOLDOWN[key]&&t0g-SN_COOLDOWN[key]<820)return;
+  SN_COOLDOWN[key]=t0g;
   var c=cons(tr.cons),flash=$('#sn-flash'),q=gravityPos(s.x+c.ox,s.y+c.oy);
   if(!q||q[2]>=1)return;
   flash.style.setProperty('--sx',Math.round(q[0])+'px');
@@ -1544,7 +1581,12 @@ function triggerSupernova(key){
 
   /* Same supernova language for all three trigger stars; only the color differs. */
   var t0=performance.now();
-  for(var i=0;i<(IS_POTATO?8:22);i++){
+  var count=IS_POTATO?8:22;
+  /* Hard safety net: whatever else is going on, PU can never grow past a
+     sane size. Oldest particles are dropped first so the scene keeps moving
+     instead of accumulating work forever. */
+  if(PU.length+count>80)PU.splice(0,Math.max(0,PU.length+count-80));
+  for(var i=0;i<count;i++){
     var a=Math.random()*6.283,sp=38+Math.random()*105;
     PU.push({c:c,a:tr.star,b:tr.star,t:t0,d:760+Math.random()*180,shock:true,snKey:key,ang:a,sp:sp,i:i});
   }
