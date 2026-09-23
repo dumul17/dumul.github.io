@@ -194,8 +194,8 @@ var tapFlash={until:0,cons:null};
 var konamiSeq=[],konami=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight'];
 var utcClicks=0,utcReset=0;
 var SW=null,swP=0;
-var AMB=mkAudio('constellation.mp3',.5,true);
-var GARG=mkAudio('gargantua.mp3',0,true);
+var AMB=mkAudio('constellation.opus',.5,true);
+var GARG=mkAudio('collapsars.opus',0,true);
 var SFX={rigel:mkAudio('rigel.opus',.85,false),spica:mkAudio('spica.opus',.85,false),betel:mkAudio('betelgeuse.opus',.85,false)};
 function mkAudio(name,vol,loop){var a=new Audio(encodeURIComponent(name));a.preload='none';a.loop=!!loop;a.volume=vol;return a;}
 function safePlay(a){if(!a)return false;try{var p=a.play();if(p&&p.catch)p.catch(function(){});return true;}catch(e){return false;}}
