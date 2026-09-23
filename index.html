@@ -560,12 +560,12 @@ var CONS=[
    o2:{ra:105.40,dec:-22.60,r:1.7,c:'#cfeeff'},
    /* hind — real Wezen/Adhara/Aludra; hip + 2 feet tuned to reference */
    wezen:{ra:107.098,dec:-26.393,r:2.7,c:'#cfeeff'},
-   hip:{ra:105.70,dec:-27.55,r:1.4,c:'#cfeeff'},
-   adhara:{ra:104.656,dec:-28.972,r:3.0,c:'#a8d4ff'},
+   hip:{ra:105.70,dec:-27.55,r:1.7,c:'#cfeeff'},
+   adhara:{ra:104.656,dec:-28.972,r:2.6,c:'#a8d4ff'},
    aludra:{ra:111.024,dec:-29.303,r:2.4,c:'#cde6ff'},
-   /* hleg1: more horizontal (right on screen); hleg2: down */
-   hleg1:{ra:101.80,dec:-29.40,r:1.5,c:'#b8d8ff'},
-   hleg2:{ra:105.20,dec:-31.60,r:1.5,c:'#b8d8ff'}},
+   /* hleg1: horizontal (right on screen); hleg2: down — same joint size as other line nodes */
+   hleg1:{ra:101.80,dec:-29.40,r:1.7,c:'#cfeeff'},
+   hleg2:{ra:105.20,dec:-31.60,r:1.7,c:'#cfeeff'}},
   /* front + belly UNCHANGED.
      hind only: Wezen→Aludra (tail), Wezen→hip (hip also gets belly),
      hip→Adhara, Adhara branches to 2 hind feet */
@@ -1554,7 +1554,8 @@ function placeSecretMsg(){
 function drawPulses(now,age){
   if(reduce||IS_POTATO||age<4||SW)return;
   if(now>nextPU){nextPU=now+500+Math.random()*900;
-    var c=CONS[Math.random()<.55?0:1],l=c.lines[(Math.random()*c.lines.length)|0],f=Math.random()<.5;
+    /* Pick any constellation (Orion / Virgo / Canis Major) so every figure gets line pulses */
+    var c=CONS[(Math.random()*CONS.length)|0],l=c.lines[(Math.random()*c.lines.length)|0],f=Math.random()<.5;
     PU.push({c:c,a:f?l[1]:l[0],b:f?l[0]:l[1],t:now,d:1100+Math.random()*600});}
   for(var i=PU.length-1;i>=0;i--){
     var p=PU[i],u=(now-p.t)/p.d;if(u>1){PU.splice(i,1);continue;}
