@@ -112,9 +112,9 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 
 @media (prefers-reduced-motion:reduce){h1.gl .big,h1.gl .kicker{animation-duration:.01s}}
 </style>
-<meta name="gimmick-revision" content="v37: cached background + lightweight audio visualizer + low-end supernova safety; telescope easter egg">
+<meta name="gimmick-revision" content="v32: v27 baseline + Gargantua audio spectrum visualizer + dense rings + blur-free breathing ring; telescope easter egg">
 </head>
-<body data-gimmick-baseline="v25" data-gimmick-revision="v37-low-end-safe-telescope-easter-egg">
+<body data-gimmick-baseline="v25" data-gimmick-revision="v32-telescope-easter-egg">
 <canvas id="sky" aria-hidden="true"></canvas>
 <div class="scan" aria-hidden="true"></div>
 <header id="header">
@@ -152,10 +152,8 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 'use strict';
 var $=function(s){return document.querySelector(s);};
 var cv=$('#sky'),g=cv.getContext('2d');
-cv.addEventListener('contextlost',function(e){e.preventDefault();renderRAF=0;},{passive:false});
-cv.addEventListener('contextrestored',function(){bgDirty=true;try{buildSprite();}catch(err){}startRenderLoop();});
 var reduce=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
-var IS_POTATO=!!((navigator.deviceMemory&&navigator.deviceMemory<=2)||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=2)||(navigator.connection&&navigator.connection.saveData));
+var IS_POTATO=!!((navigator.deviceMemory&&navigator.deviceMemory<=4)||innerWidth<600||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=4)||(navigator.connection&&navigator.connection.saveData));
 var W=0,H=0,DPR=1,START=performance.now(),renderRAF=0,pageHidden=false,hiddenAt=0;
 var mouse={x:0,y:0,tx:0,ty:0},glitchUntil=0,hot=null;
 var touchMode=('ontouchstart' in window)||navigator.maxTouchPoints>0;
@@ -215,23 +213,189 @@ var activeSfx=null;
    The visualizer taps the currently playing star SFX through Web Audio.
    It never owns playback state: pause/stop simply makes the spectrum decay
    back to the normal Gargantua ring. */
-var AV={ctx:null,an:null,sources:{},data:null,prev:null,ready:false,fallback:true,level:0,bass:0,mid:0,high:0,beat:0,peak:0,glitchUntil:0,avgFlux:0,lastBeatT:0,skip:0};
-/* V37: native <audio> owns playback. The visualizer only samples currentTime;
-   no AudioContext, MediaElementSource, FFT, or spectrum arrays. */
-function audioVizInit(a){if(!a)return false;AV.fallback=true;AV.ready=false;AV.skip=0;AV.avgFlux=0;AV.lastBeatT=0;return true;}
-function audioVizOff(){AV.level*=.72;AV.bass*=.72;AV.mid*=.72;AV.high*=.72;AV.beat*=.68;AV.peak*=.9;AV.glitchUntil=0;}
+var AV={ctx:null,an:null,sources:{},data:null,prev:null,ready:false,fallback:false,level:0,bass:0,mid:0,high:0,beat:0,peak:0,glitchUntil:0,avgFlux:0,lastBeatT:0,skip:0};
+/* The analyser path intentionally follows the proven dumul.html recipe:
+   one AudioContext + one AnalyserNode, FFT 1024, smoothed spectrum and a
+   low-frequency spectral-flux beat detector. Playback remains owned by the
+   normal <audio> elements; this layer only observes them. */
+function audioVizInit(a){
+  if(!a)return false;
+  try{
+    var AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC){AV.fallback=true;AV.ready=false;return true;}
+    if(!AV.ctx){
+      AV.ctx=new AC();
+      AV.an=AV.ctx.createAnalyser();
+      AV.an.fftSize=1024;
+      AV.an.smoothingTimeConstant=.6;
+      AV.an.minDecibels=-90;
+      AV.an.maxDecibels=-12;
+      AV.data=new Uint8Array(AV.an.frequencyBinCount);
+      AV.prev=new Uint8Array(AV.an.frequencyBinCount);
+      AV.an.connect(AV.ctx.destination);
+    }
+    var key=SFX.rigel===a?'rigel':(SFX.spica===a?'spica':(SFX.betel===a?'betel':null));
+    if(!key)return false;
+    if(!AV.sources[key]){
+      try{
+        var src=AV.ctx.createMediaElementSource(a);
+        src.connect(AV.an);
+        AV.sources[key]=src;
+      }catch(srcErr){
+        AV.fallback=true;AV.ready=false;return true;
+      }
+    }
+    AV.fallback=false;
+    AV.ready=true;
+    AV.skip=0;AV.avgFlux=0;AV.lastBeatT=0;
+    if(AV.ctx.state!=='running'&&AV.ctx.resume){
+      var rp=AV.ctx.resume();if(rp&&rp.catch)rp.catch(function(){AV.fallback=true;AV.ready=false;});
+    }
+    return true;
+  }catch(e){AV.fallback=true;AV.ready=false;return true;}
+}
+function audioVizOff(){
+  AV.level*=.72;AV.bass*=.72;AV.mid*=.72;AV.high*=.72;AV.beat*=.68;AV.peak*=.9;AV.glitchUntil=0;
+}
 function updateAudioViz(now){
   if(!activeSfx||activeSfx.paused||activeSfx.ended){audioVizOff();return;}
-  var t=activeSfx.currentTime||0,ph=(t*2.35)%1,pulse=Math.pow(Math.max(0,1-Math.abs(ph-.10)/.14),1.7),swing=.5+.5*Math.sin(t*2.7);
-  AV.bass+=(.10+.58*pulse+.08*swing-AV.bass)*.34;AV.mid+=(.07+.32*(.5+.5*Math.sin(t*7.1+1.2))-AV.mid)*.25;AV.high+=(.04+.22*(.5+.5*Math.sin(t*12.7+2.4))-AV.high)*.22;AV.level+=(Math.max(AV.bass,AV.mid*.8,AV.high*.55)-AV.level)*.28;AV.beat+=(pulse-AV.beat)*.45;if(pulse>.82)AV.glitchUntil=now+45;
+  if(AV.fallback){
+    /* Lightweight fallback only when Web Audio is genuinely unavailable. */
+    var t=activeSfx.currentTime||0;
+    var ph=(t*2.35)%1;
+    var pulse=Math.pow(Math.max(0,1-Math.abs(ph-.10)/.14),1.7);
+    var swing=.5+.5*Math.sin(t*2.7);
+    AV.bass+=(.10+.58*pulse+.08*swing-AV.bass)*.34;
+    AV.mid+=(.07+.32*(.5+.5*Math.sin(t*7.1+1.2))-AV.mid)*.25;
+    AV.high+=(.04+.22*(.5+.5*Math.sin(t*12.7+2.4))-AV.high)*.22;
+    AV.level+=(Math.max(AV.bass,AV.mid*.8,AV.high*.55)-AV.level)*.28;
+    AV.beat+=(pulse-AV.beat)*.45;
+    if(pulse>.78&&Math.random()<.12)AV.glitchUntil=now+65;
+    return;
+  }
+  if(!AV.ready||!AV.an||!AV.data)return;
+  /* Same sampling/beat strategy as dumul.html, but every other render frame
+     to keep the main canvas cheap on phones. */
+  AV.skip^=1;if(AV.skip){AV.beat*=.94;return;}
+  try{
+    AV.an.getByteFrequencyData(AV.data);
+    var n=AV.data.length,i,e=0,flux=0;
+    for(i=1;i<=8;i++){var d=AV.data[i]-AV.prev[i];if(d>0)flux+=d;}
+    flux/=8*255;
+    AV.avgFlux+=(flux-AV.avgFlux)*.06;
+    if(flux>AV.avgFlux*1.7+.02&&now-AV.lastBeatT>170){
+      AV.lastBeatT=now;AV.beat=1;AV.glitchUntil=now+(Math.random()<.22?70:0);
+    }else AV.beat*=.87;
+    AV.prev.set(AV.data);
+    for(i=1;i<=120&&i<n;i++)e+=AV.data[i];
+    e/=Math.max(1,Math.min(120,n-1))*255;
+    var bn=Math.max(1,Math.floor(Math.min(120,n-1)*.10));
+    var mn=Math.max(bn+1,Math.floor(Math.min(120,n-1)*.48));
+    var bass=0,mid=0,high=0,lim=Math.min(120,n-1);
+    for(i=1;i<=lim;i++){
+      var v=AV.data[i]/255;
+      if(i<=bn)bass+=v;else if(i<=mn)mid+=v;else high+=v;
+    }
+    bass/=bn;mid/=Math.max(1,mn-bn);high/=Math.max(1,lim-mn);
+    AV.bass+=(bass-AV.bass)*.30;
+    AV.mid+=(mid-AV.mid)*.24;
+    AV.high+=(high-AV.high)*.20;
+    AV.level+=(Math.max(0,(e-.12)*2.7)-AV.level)*.30;
+    AV.peak+=(AV.bass-AV.peak)*.10;
+  }catch(e){AV.fallback=true;AV.ready=false;}
+}
+/* Dense, audio-reactive ripple rings around Gargantua, built for phones:
+   - the expensive part (reading the spectrum, walking the circle) runs ONCE
+     into a small shared point profile, reused by every ring that needs it.
+   - most of the "density" comes from cheap plain g.arc() rings (a single
+     native path op each) whose radius/alpha simply ride the smoothed level
+     and beat values already computed in updateAudioViz - no per-vertex work.
+   - the shared profile itself is only recomputed every other frame (synced
+     to AV.skip, the same cadence the analyser already samples at); audio
+     motion is far slower than 60fps so this is invisible but roughly halves
+     the per-vertex cost. */
+var AVP={pts:null,N:28,stamp:-1};
+function buildAVProfile(now){
+  var N=AVP.N,pts=AVP.pts;
+  if(!pts||pts.length!==(N+1)*3){pts=AVP.pts=new Float32Array((N+1)*3);}
+  var data=AV.data,n=data?data.length:0,b=AV.bass,m=AV.mid,h=AV.high;
+  for(var j=0;j<=N;j++){
+    var u=j/N,ang=u*6.283,fv;
+    if(n){var uu=Math.abs(u-.5)*2;var bi=1+Math.min(119,n-2,(uu*uu*118)|0);fv=data[bi]/255;}
+    else fv=.45*b+.35*m+.20*h;
+    var wave=.022*Math.sin(ang*3+now*.0018);
+    pts[j*3]=Math.cos(ang);pts[j*3+1]=Math.sin(ang);pts[j*3+2]=fv*(1+wave);
+  }
+  AVP.stamp=AV.skip;
+}
+function strokeReactiveRing(R,base,spread,lv,beat,glitch,rgb,alpha,width){
+  var pts=AVP.pts,N=AVP.N;
+  g.strokeStyle='rgba('+rgb+','+alpha+')';g.lineWidth=Math.max(.7,width);
+  g.beginPath();
+  for(var j=0;j<=N;j++){
+    var fv=pts[j*3+2],amp=R*(.018+.045*lv+.095*fv+spread);
+    var rr=R*base+amp;
+    if(beat>.35)rr+=R*.05*beat;
+    if(glitch&&j%7===0)rr+=(Math.random()-.5)*R*.14;
+    var x=pts[j*3]*rr,y=pts[j*3+1]*rr;
+    if(j===0)g.moveTo(x,y);else g.lineTo(x,y);
+  }
+  g.closePath();g.stroke();
+}
+/* Every "density" ring below reuses the SAME cached point profile (no new
+   sin/cos/pow at all - just a few multiplies per vertex), so going from 2
+   rings to a dozen costs almost nothing extra per frame. This is what makes
+   the moire look from the reference image affordable on a phone. */
+function strokeCheapRing(R,base,growth,lv,beat,rgb,alpha,width){
+  var pts=AVP.pts,N=AVP.N;
+  g.strokeStyle='rgba('+rgb+','+alpha+')';g.lineWidth=width;
+  g.beginPath();
+  for(var j=0;j<=N;j++){
+    var rr=R*base+pts[j*3+2]*growth;
+    var x=pts[j*3]*rr,y=pts[j*3+1]*rr;
+    if(j===0)g.moveTo(x,y);else g.lineTo(x,y);
+  }
+  g.closePath();g.stroke();
 }
 function drawAudioVisualizer(now,R){
   if(reduce||!activeSfx||activeSfx.paused||activeSfx.ended)return;
-  try{var beat=AV.beat,lv=AV.level,h=AV.high,t=activeSfx.currentTime||0,glitch=now<AV.glitchUntil;g.save();g.globalCompositeOperation='lighter';
-    var count=IS_POTATO?3:5;
-    for(var i=0;i<count;i++){var u=i/Math.max(1,count-1),rr=R*(1.07+u*(.92+.10*lv)+.018*Math.sin(t*3.2+i));rr+=R*(.035*lv+.055*beat*(1-u));var al=(1-u*.72)*(.16+.14*lv+.10*beat);g.strokeStyle='rgba('+(i%2?'255,70,215':'110,229,255')+','+al+')';g.lineWidth=Math.max(.65,R*(.010-.002*u));g.beginPath();g.arc(0,0,rr,0,6.283);g.stroke();}
-    var hero=R*(1.045+.028*lv+.045*beat);g.strokeStyle='rgba(238,246,250,'+(.34+.22*lv+.18*beat)+')';g.lineWidth=Math.max(.8,R*(.018+.006*beat));g.beginPath();g.arc(0,0,hero,0,6.283);g.stroke();
-    if(!IS_POTATO&&glitch){g.strokeStyle='rgba(255,70,215,.18)';g.lineWidth=.7;g.beginPath();g.arc(0,0,R*(1.32+.06*h),0,6.283);g.stroke();}g.restore();
+  try{
+    var beat=AV.beat,lv=AV.level,b=AV.bass,m=AV.mid,h=AV.high;
+    var glitch=now<AV.glitchUntil;
+    if(AVP.stamp!==AV.skip)buildAVProfile(now);
+    g.save();g.globalCompositeOperation='lighter';
+
+    /* Dense moire field: a dozen rings sharing one cached profile, so this
+       costs almost nothing beyond the two hero rings below - just what
+       makes it read as "dense" like the reference photo. Cyan and pink
+       alternate and interleave, same as the reference's colour blend. */
+    var DENSE=IS_POTATO?5:17;
+    for(var d=0;d<DENSE;d++){
+      var dp=d/(DENSE-1),pink=d%2===1;
+      var base=1.08+dp*1.65,growth=R*(.05+.16*dp+.12*lv+.10*beat);
+      var alpha=(1-dp*.72)*(.10+.09*lv+.10*beat);
+      strokeCheapRing(R,base,growth,lv,beat,pink?'255,70,215':'110,229,255',alpha,Math.max(.5,R*.007));
+    }
+
+    /* Two "hero" rings actually shaped by the live spectrum, drawn brightest
+       and closest to the horizon so the density above reads as depth. */
+    strokeReactiveRing(R,1.065,.10+.055*m+.025*h,lv,beat,glitch,'110,229,255',.30+.26*lv+.22*beat,R*.019);
+    if(!IS_POTATO)strokeReactiveRing(R,1.14,.075+.04*m,lv,beat,glitch,'255,70,215',.26+.20*lv+.18*beat,R*.014);
+
+    if(!IS_POTATO&&beat>.15){
+      var sr=R*(1.06+.13*beat);
+      g.strokeStyle='rgba(235,245,255,'+(.08+.20*beat)+')';
+      g.lineWidth=Math.max(.7,R*(.012+.014*beat));
+      g.beginPath();g.arc(0,0,sr,0,6.283);g.stroke();
+    }
+    if(!IS_POTATO&&glitch){
+      for(var q=0;q<3;q++){
+        var a=(Math.random()*2-1)*Math.PI,dd=R*(1.08+Math.random()*1.05),len=R*(.25+Math.random()*.7);
+        g.strokeStyle=q===1?'rgba(110,229,255,.24)':'rgba(255,70,215,.20)';
+        g.lineWidth=.7;g.beginPath();g.moveTo(Math.cos(a)*dd,Math.sin(a)*dd);g.lineTo(Math.cos(a)*(dd+len),Math.sin(a)*(dd+len));g.stroke();
+      }
+    }
+    g.restore();
   }catch(err){}
 }
 function ambTry(){
@@ -459,15 +623,33 @@ function layout(){
     ];
     GAL=spots.map(function(q,i){var cc=galCols[i%galCols.length];return{x:q[0],y:q[1],rx:q[2],ry:q[3],rot:(i*.83)%3.14,scale:q[4],p:i*.91,tw:.7+i*.06,col:cc};});
   }
-}
-
   if(bgDirty||!bgCanvas){
-    bgCanvas=document.createElement('canvas');bgCanvas.width=Math.max(1,Math.round(W*DPR));bgCanvas.height=Math.max(1,Math.round(H*DPR));bgCtx=bgCanvas.getContext('2d',{alpha:false});bgCtx.setTransform(DPR,0,0,DPR,0,0);bgCtx.fillStyle='#050b12';bgCtx.fillRect(0,0,W,H);
-    for(var bi=0;bi<BG.length;bi++){var bb=BG[bi];bgCtx.fillStyle='rgba('+bb.c+','+bb.a+')';bgCtx.beginPath();bgCtx.arc(bb.x,bb.y,bb.r,0,6.283);bgCtx.fill();}
+    bgCanvas=document.createElement('canvas');
+    bgCanvas.width=Math.max(1,Math.round(W*DPR));bgCanvas.height=Math.max(1,Math.round(H*DPR));
+    bgCtx=bgCanvas.getContext('2d',{alpha:false});
+    bgCtx.setTransform(DPR,0,0,DPR,0,0);
+    bgCtx.fillStyle='#050b12';bgCtx.fillRect(0,0,W,H);
+    for(var bi=0;bi<BG.length;bi++){
+      var bb=BG[bi];
+      bgCtx.fillStyle='rgba('+bb.c+','+bb.a+')';
+      bgCtx.beginPath();bgCtx.arc(bb.x,bb.y,bb.r,0,6.283);bgCtx.fill();
+    }
     var gCount=IS_POTATO?4:GAL.length;
-    for(var gi=0;gi<gCount;gi++){var gd=GAL[gi],px=gd.x*W,py=gd.y*H,w=(6+5*gd.scale),h=(2.6+2.4*gd.scale);bgCtx.save();bgCtx.translate(px,py);bgCtx.rotate(gd.rot);var gc=gd.col;var gh=bgCtx.createRadialGradient(0,0,0,0,0,w*1.9);gh.addColorStop(0,'rgba('+gc.core+',.20)');gh.addColorStop(.30,'rgba('+gc.outer+',.09)');gh.addColorStop(.68,'rgba('+gc.halo+',.045)');gh.addColorStop(1,'rgba('+gc.halo+',0)');bgCtx.fillStyle=gh;bgCtx.globalAlpha=.78;bgCtx.beginPath();bgCtx.ellipse(0,0,w*1.7,h*1.8,0,0,6.283);bgCtx.fill();bgCtx.globalAlpha=.22;bgCtx.strokeStyle='rgba('+gc.outer+',.82)';bgCtx.lineWidth=.5;bgCtx.beginPath();bgCtx.ellipse(0,0,w,h,.06,0,6.283);bgCtx.stroke();bgCtx.fillStyle='rgba('+gc.core+',.30)';bgCtx.beginPath();bgCtx.ellipse(0,0,Math.max(.8,w*.17),Math.max(.55,h*.24),0,0,6.283);bgCtx.fill();bgCtx.restore();}
+    for(var gi=0;gi<gCount;gi++){
+      var gd=GAL[gi],px=gd.x*W,py=gd.y*H,w=(6+5*gd.scale),h=(2.6+2.4*gd.scale);
+      bgCtx.save();bgCtx.translate(px,py);bgCtx.rotate(gd.rot);
+      var gc=gd.col||{core:'255,225,185',outer:'205,225,255',halo:'135,175,230'};
+      var gh=bgCtx.createRadialGradient(0,0,0,0,0,w*1.9);
+      gh.addColorStop(0,'rgba('+gc.core+',.20)');gh.addColorStop(.30,'rgba('+gc.outer+',.09)');gh.addColorStop(.68,'rgba('+gc.halo+',.045)');gh.addColorStop(1,'rgba('+gc.halo+',0)');
+      bgCtx.fillStyle=gh;bgCtx.globalAlpha=.78;bgCtx.beginPath();bgCtx.ellipse(0,0,w*1.7,h*1.8,0,0,6.283);bgCtx.fill();
+      bgCtx.globalAlpha=.22;bgCtx.strokeStyle='rgba('+gc.outer+',.82)';bgCtx.lineWidth=.5;bgCtx.beginPath();bgCtx.ellipse(0,0,w,h,.06,0,6.283);bgCtx.stroke();
+      bgCtx.fillStyle='rgba('+gc.core+',.30)';bgCtx.beginPath();bgCtx.ellipse(0,0,Math.max(.8,w*.17),Math.max(.55,h*.24),0,0,6.283);bgCtx.fill();
+      bgCtx.restore();
+    }
     bgDirty=false;
   }
+}
+
 /* ---------- lubang hitam Gargantua ---------- */
 function ease(u){return u*u*(3-2*u);}
 function pull(x,y){                       /* posisi benda saat disedot: berputar spiral ke lubang hitam */
@@ -524,11 +706,18 @@ function buildSprite(){                   /* layered gravitational lens: luminou
   halo.addColorStop(.48,'rgba(100,145,195,.055)');
   halo.addColorStop(.72,'rgba(55,85,125,.025)');
   halo.addColorStop(1,'rgba(20,35,55,0)');
-  s.fillStyle=halo;s.beginPath();s.arc(cx,cy,R*(IS_POTATO?2.7:4),0,6.283);s.fill();
+  s.fillStyle=halo;s.beginPath();s.arc(cx,cy,R*4,0,6.283);s.fill();
 
   /* Multiple lensing layers: the thick luminous structure around the horizon. */
-  var layers=IS_POTATO?[{r:1.16,w:.070,c:'rgba(175,205,235,.34)',b:.12},{r:1.035,w:.032,c:'rgba(250,252,252,.88)',b:.08}]:[
-    {r:1.34,w:.105,c:'rgba(92,140,195,.18)',b:.28},{r:1.23,w:.080,c:'rgba(150,190,230,.30)',b:.24},{r:1.14,w:.055,c:'rgba(220,235,246,.54)',b:.18},{r:1.075,w:.034,c:'rgba(250,252,250,.84)',b:.13},{r:1.025,w:.022,c:'rgba(255,255,252,.96)',b:.10}
+  var layers=IS_POTATO?[
+    {r:1.16,w:.070,c:'rgba(175,205,235,.34)',b:.12},
+    {r:1.035,w:.032,c:'rgba(250,252,252,.88)',b:.08}
+  ]:[
+    {r:1.34,w:.105,c:'rgba(92,140,195,.18)',b:.28},
+    {r:1.23,w:.080,c:'rgba(150,190,230,.30)',b:.24},
+    {r:1.14,w:.055,c:'rgba(220,235,246,.54)',b:.18},
+    {r:1.075,w:.034,c:'rgba(250,252,250,.84)',b:.13},
+    {r:1.025,w:.022,c:'rgba(255,255,252,.96)',b:.10}
   ];
   layers.forEach(function(L){
     s.strokeStyle=L.c;s.lineWidth=Math.max(.8,R*L.w);
@@ -1089,8 +1278,11 @@ function drawTriggerVisuals(now){
     g.strokeStyle='rgba('+tr.rgb+','+pa2+')';g.lineWidth=.7;g.beginPath();g.arc(x,y,base+7+11*phase2,0,6.283);g.stroke();
     /* selected audio gives a gentle luminous fill, not a different animation */
     if(selected){
-      if(IS_POTATO){g.fillStyle='rgba('+tr.rgb+','+(.035*strength*fade)+')';g.beginPath();g.arc(x,y,outerR*.72,0,6.283);g.fill();}
-      else{var rg=g.createRadialGradient(x,y,0,x,y,outerR+4);rg.addColorStop(0,'rgba('+tr.rgb+','+(.12*strength*fade)+')');rg.addColorStop(.55,'rgba('+tr.rgb+','+(.045*strength*fade)+')');rg.addColorStop(1,'rgba('+tr.rgb+',0)');g.fillStyle=rg;g.beginPath();g.arc(x,y,outerR+4,0,6.283);g.fill();}
+      var rg=g.createRadialGradient(x,y,0,x,y,outerR+4);
+      rg.addColorStop(0,'rgba('+tr.rgb+','+(.12*strength*fade)+')');
+      rg.addColorStop(.55,'rgba('+tr.rgb+','+(.045*strength*fade)+')');
+      rg.addColorStop(1,'rgba('+tr.rgb+',0)');
+      g.fillStyle=rg;g.beginPath();g.arc(x,y,outerR+4,0,6.283);g.fill();
     }
     g.strokeStyle='rgba('+tr.rgb+','+(.55*strength*fade)+')';g.lineWidth=.7;
     g.beginPath();g.moveTo(x-base-4,y);g.lineTo(x-base+2,y);g.moveTo(x+base-2,y);g.lineTo(x+base+4,y);g.moveTo(x,y-base-4);g.lineTo(x,y-base+2);g.moveTo(x,y+base-2);g.lineTo(x,y+base+4);g.stroke();
@@ -1347,17 +1539,16 @@ function triggerSupernova(key){
 
   /* Same supernova language for all three trigger stars; only the color differs. */
   var t0=performance.now();
-  if(!IS_POTATO){
-    for(var i=0;i<22;i++){
-      var a=Math.random()*6.283,sp=38+Math.random()*105;
-      PU.push({c:c,a:tr.star,b:tr.star,t:t0,d:760+Math.random()*180,shock:true,snKey:key,ang:a,sp:sp,i:i});
-    }
-    SN_BURSTS.push({key:key,t:t0,d:760});
+  for(var i=0;i<(IS_POTATO?8:22);i++){
+    var a=Math.random()*6.283,sp=38+Math.random()*105;
+    PU.push({c:c,a:tr.star,b:tr.star,t:t0,d:760+Math.random()*180,shock:true,snKey:key,ang:a,sp:sp,i:i});
   }
+  /* A short luminous core burst makes Rigel/Spica feel like the same event as Betelgeuse. */
+  SN_BURSTS.push({key:key,t:t0,d:760});
 }
 var SN_BURSTS=[];
 function drawSupernovaBursts(now){
-  if(IS_POTATO||!SN_BURSTS.length)return;
+  if(!SN_BURSTS.length)return;
   for(var i=SN_BURSTS.length-1;i>=0;i--){
     var b=SN_BURSTS[i],u=(now-b.t)/b.d;
     if(u>1){SN_BURSTS.splice(i,1);continue;}
