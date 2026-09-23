@@ -140,7 +140,7 @@ h1.display.dm-glitching::after{animation:dm-slice-b .65s steps(1,end)}
   function rows(){return Array.prototype.slice.call(document.querySelectorAll(SEL));}
   function titleOf(r){var s=r.querySelector('span.display');return s?s.textContent.trim():'';}
   function slugOf(r){return titleOf(r).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');}
-  function srcOf(r){return slugOf(r)+'.mp3';}
+  function srcOf(r){return slugOf(r)+'.opus';}
   function fmt(s){if(!isFinite(s)||s<0)return '--:--';s=Math.floor(s);var m=Math.floor(s/60),r=s%60;return(m<10?'0':'')+m+':'+(r<10?'0':'')+r;}
   function toast(msg){
     var t=document.getElementById('dm-toast');
@@ -387,7 +387,7 @@ h1.display.dm-glitching::after{animation:dm-slice-b .65s steps(1,end)}
     safePlay();
   }
 
-  var GARG=new Audio(encodeURIComponent('gargantua.mp3'));GARG.loop=true;GARG.volume=.5;GARG.preload='none';
+  var GARG=new Audio(encodeURIComponent('gargantua.opus'));GARG.loop=true;GARG.volume=.5;GARG.preload='none';
   function gTry(){var p=GARG.play();if(p&&p.catch)p.catch(function(){});}
   gTry();
   document.addEventListener('pointerdown',gTry,{once:true});
