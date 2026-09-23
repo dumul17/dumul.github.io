@@ -112,7 +112,7 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 
 @media (prefers-reduced-motion:reduce){h1.gl .big,h1.gl .kicker{animation-duration:.01s}}
 
-/* ---------- v41.3 boot / vertical matrix rain + session skip ---------- */
+/* ---------- v41.4 boot / vertical matrix rain on every load ---------- */
 #boot-screen{position:fixed;inset:0;z-index:100;background:#02070b;color:#8eeeff;display:flex;align-items:center;justify-content:center;overflow:hidden;font-family:'Courier New',monospace;opacity:1;visibility:visible;pointer-events:auto;transition:opacity .8s ease,visibility .8s ease}
 #boot-screen.off{opacity:0;visibility:hidden;pointer-events:none}
 #boot-matrix{position:absolute;inset:0;opacity:.55;overflow:hidden;pointer-events:none}
@@ -129,9 +129,9 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 @media(max-width:600px){#boot-core{padding:20px 15px 16px}#boot-status{font-size:9px;letter-spacing:.045em}#boot-bar{height:6px}#boot-matrix{opacity:.48}}
 
 </style>
-<meta name="gimmick-revision" content="v41.3: deferred RAF; adaptive warm; canvas matrix rain; sessionStorage skip on return">
+<meta name="gimmick-revision" content="v41.4: deferred RAF; adaptive warm; canvas matrix rain; boot on every load">
 </head>
-<body data-gimmick-baseline="v25" data-gimmick-revision="v41.3-boot-session-skip">
+<body data-gimmick-baseline="v25" data-gimmick-revision="v41.4-boot-always">
 
 <div id="boot-screen" aria-hidden="false">
   <div id="boot-matrix" aria-hidden="true"></div>
@@ -1556,7 +1556,7 @@ function drawPortals(age,now){
   });
 }
 var lastFrameOK=performance.now();
-/* bootDone stays false until warm-up finishes (or session skip). */
+/* bootDone stays false until warm-up finishes. */
 var bootDone=false;
 function frame(now){
   renderRAF=0;
@@ -1885,33 +1885,19 @@ document.addEventListener('pointerdown',function(e){
   }
 },{passive:true});
 
-/* BFCache restore (back from dumul.html): don't force reload. */
+/* BFCache restore (back from dumul.html): force a fresh boot so the
+   Matrix warm-up and deferred render staging run again instead of returning
+   directly into a potentially cold/heavy WebView state. */
 window.addEventListener('pageshow',function(e){
-  if(e.persisted){
-    bootDone=true;
-    pageHidden=false;
-    try{sessionStorage.setItem('dumul_constellation_warmed','1');}catch(err){}
-    startRenderLoop();
-  }
+  if(e.persisted)location.reload();
 });
 
-/* ---------- v41.3 boot / media warm-up + sessionStorage skip ----------
-   First visit → full boot + matrix rain. Return from dumul.html → skip.
-   Constellation RAF starts only after boot finishes (or session skip). */
+/* ---------- v41.4 boot / media warm-up ----------
+   Every load → full boot + matrix rain. Constellation RAF starts only after
+   the warm-up finishes. No sessionStorage state is used for boot skipping. */
 (function(){
-  var WARM_KEY='dumul_constellation_warmed';
   var bs=document.getElementById('boot-screen'),fill=document.getElementById('boot-fill'),pct=document.getElementById('boot-pct'),sig=document.getElementById('boot-signal'),mx=document.getElementById('boot-matrix');
   var matrixRAF=0,matrixAlive=false;
-
-  function markWarmed(){try{sessionStorage.setItem(WARM_KEY,'1');}catch(e){}}
-  function wasWarmed(){try{return sessionStorage.getItem(WARM_KEY)==='1';}catch(e){return false;}}
-
-  /* Session skip: already warmed this tab session */
-  if(wasWarmed()){
-    if(bs){bs.classList.add('off');bs.style.transition='none';if(bs.parentNode)bs.remove();}
-    bootDone=true;
-    return;
-  }
 
   /* Authentic vertical Matrix rain (canvas) */
   matrixAlive=true;
@@ -1986,7 +1972,6 @@ window.addEventListener('pageshow',function(e){
   function finish(){
     if(done)return;done=true;
     fill.style.width='100%';pct.textContent='100%';sig.classList.add('on');
-    markWarmed();
     setTimeout(function(){
       bs.classList.add('off');
       matrixAlive=false;
