@@ -63,11 +63,11 @@ footer nav svg{width:20px;height:20px;display:block}
 /* visual trigger bintang: ring pulse dirender di canvas, hit area tetap transparan */
 .portal
 ,.hit{position:fixed;left:0;top:0;z-index:4}
-.portal{display:block;margin-top:-24px;color:#eaf6ff;text-decoration:none;opacity:0;transition:opacity .9s;will-change:transform}
+.portal{display:block;margin-top:-20px;color:#eaf6ff;text-decoration:none;opacity:0;transition:opacity .9s;will-change:transform;pointer-events:auto}
 .portal.on{opacity:1}
-.portal .lab{display:block;padding:6px 12px;border-left:1px solid rgba(110,229,255,.55);background:linear-gradient(90deg,rgba(6,11,17,.6),transparent)}
-.portal b{display:block;font:700 13px/1.1 'Syne',sans-serif;letter-spacing:.2em;text-transform:uppercase}
-.portal small{display:block;margin-top:5px;font-size:10.5px;letter-spacing:.07em;color:rgba(184,198,214,.82)}
+.portal .lab{display:block;padding:5px 9px;border-left:1px solid rgba(110,229,255,.55);background:linear-gradient(90deg,rgba(6,11,17,.6),transparent)}
+.portal b{display:block;font:700 11px/1.1 'Syne',sans-serif;letter-spacing:.16em;text-transform:uppercase}
+.portal small{display:block;margin-top:3px;font-size:9px;letter-spacing:.05em;color:rgba(184,198,214,.82)}
 .portal:hover .lab,.portal:focus-visible .lab,.portal.hot .lab{border-color:#6ee5ff;background:linear-gradient(90deg,rgba(110,229,255,.18),transparent)}
 .portal:focus-visible{outline:2px solid #ff7ad9;outline-offset:3px}
 .hit{width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;-webkit-tap-highlight-color:transparent;background:transparent;border:0;padding:0;cursor:pointer;outline:none}
@@ -97,7 +97,7 @@ body.konami .scan{background:repeating-linear-gradient(0deg,rgba(40,255,100,.08)
 body.konami #title .big,body.konami #title .kicker{color:#65ff88;text-shadow:0 0 18px rgba(60,255,100,.7)}
 body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 @keyframes greenGlitch{0%,100%{transform:none;filter:none}20%{transform:translateX(-3px);filter:hue-rotate(80deg) saturate(1.5)}45%{transform:translateX(4px);filter:hue-rotate(110deg) saturate(2)}70%{transform:translateX(-1px);filter:hue-rotate(90deg)}}
-.portal .lab:after{content:'OPEN →';display:block;margin-top:4px;font:600 8px/1 'Courier New',monospace;letter-spacing:.14em;color:rgba(110,229,255,.42);transition:color .2s,transform .2s}
+.portal .lab:after{content:'OPEN →';display:block;margin-top:3px;font:600 7px/1 'Courier New',monospace;letter-spacing:.12em;color:rgba(110,229,255,.42);transition:color .2s,transform .2s}
 .portal:hover .lab:after,.portal.hot .lab:after,.portal:focus-visible .lab:after{color:#6ee5ff;transform:translateX(3px)}
 /* tap/hover feedback for constellation geometry */
 .cons-hot-line{filter:drop-shadow(0 0 4px rgba(110,229,255,.45))}
@@ -108,6 +108,12 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
      The desktop minimum font-size (15px) plus wide letter-spacing can make
      this one-line message exceed a 360px screen. */
   #secret-msg{font-size:8px;letter-spacing:.06em;padding:4px 6px}
+  /* Compact portals so DUMUL/YouTube never cover interactive stars (Sirius etc.) */
+  .portal{margin-top:-16px}
+  .portal .lab{padding:4px 7px}
+  .portal b{font-size:10px;letter-spacing:.12em}
+  .portal small{font-size:8px;margin-top:2px}
+  .portal .lab:after{font-size:6.5px;margin-top:2px}
 }
 
 @media (prefers-reduced-motion:reduce){h1.gl .big,h1.gl .kicker{animation-duration:.01s}}
@@ -714,9 +720,11 @@ function layout(){
   PORTALS.forEach(function(p){
     var s=p.c.stars[p.from];
     p.sx=s.x;p.sy=s.y;
-    p.lx=p.place==='fig-right'?p.c.maxX+28:s.x+26;
+    p.lx=p.place==='fig-right'?p.c.maxX+18:s.x+20;
     p.ly=s.y;
-    var mw=Math.max(96,W-p.lx-12);p.el.style.maxWidth=mw+'px';
+    /* Hard cap so DUMUL/YouTube panels stay compact and never cover Sirius / other triggers */
+    var mw=Math.min(W<600?112:138,Math.max(84,W-p.lx-16));
+    p.el.style.maxWidth=mw+'px';
   });
   var bgOrientation=W<H?'portrait':'landscape';
   var oldOrientation=bgW<bgH?'portrait':'landscape';
