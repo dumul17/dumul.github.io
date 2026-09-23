@@ -153,7 +153,7 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 var $=function(s){return document.querySelector(s);};
 var cv=$('#sky'),g=cv.getContext('2d');
 var reduce=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
-var IS_POTATO=!!((navigator.deviceMemory&&navigator.deviceMemory<=4)||innerWidth<600||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=4)||(navigator.connection&&navigator.connection.saveData));
+var IS_POTATO=!!((navigator.deviceMemory&&navigator.deviceMemory<=2)||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=2)||(navigator.connection&&navigator.connection.saveData));
 var W=0,H=0,DPR=1,START=performance.now(),renderRAF=0,pageHidden=false,hiddenAt=0;
 var mouse={x:0,y:0,tx:0,ty:0},glitchUntil=0,hot=null;
 var touchMode=('ontouchstart' in window)||navigator.maxTouchPoints>0;
@@ -220,6 +220,11 @@ var AV={ctx:null,an:null,sources:{},data:null,prev:null,ready:false,fallback:fal
    normal <audio> elements; this layer only observes them. */
 function audioVizInit(a){
   if(!a)return false;
+  /* Potato devices never enter the Web Audio analyser path. Some low-end
+     Android WebViews can keep media playback alive while the Canvas/render
+     thread stalls when createMediaElementSource() is attached. Use the
+     deterministic currentTime fallback instead. */
+  if(IS_POTATO){AV.fallback=true;AV.ready=false;return true;}
   try{
     var AC=window.AudioContext||window.webkitAudioContext;
     if(!AC){AV.fallback=true;AV.ready=false;return true;}
