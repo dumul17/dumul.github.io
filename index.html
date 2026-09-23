@@ -112,9 +112,9 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 
 @media (prefers-reduced-motion:reduce){h1.gl .big,h1.gl .kicker{animation-duration:.01s}}
 </style>
-<meta name="gimmick-revision" content="v35: cached background + native-audio lightweight Gargantua visualizer; telescope easter egg">
+<meta name="gimmick-revision" content="v36: cached background + native-audio lightweight visualizer + low-end supernova safety; telescope easter egg">
 </head>
-<body data-gimmick-baseline="v25" data-gimmick-revision="v35-native-audio-lightweight-visualizer">
+<body data-gimmick-baseline="v25" data-gimmick-revision="v36-native-audio-safe-supernova">
 <canvas id="sky" aria-hidden="true"></canvas>
 <div class="scan" aria-hidden="true"></div>
 <header id="header">
@@ -152,6 +152,17 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 'use strict';
 var $=function(s){return document.querySelector(s);};
 var cv=$('#sky'),g=cv.getContext('2d');
+cv.addEventListener('contextlost',function(e){
+  e.preventDefault();
+  window.__hub=window.__hub||{};window.__hub.renderError='canvas context lost';
+  renderRAF=0;
+},{passive:false});
+cv.addEventListener('contextrestored',function(){
+  window.__hub=window.__hub||{};window.__hub.renderError='canvas context restored';
+  bgDirty=true;
+  try{buildSprite();}catch(err){}
+  startRenderLoop();
+});
 var reduce=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
 var IS_POTATO=!!((navigator.deviceMemory&&navigator.deviceMemory<=2)||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=2)||(navigator.connection&&navigator.connection.saveData));
 var W=0,H=0,DPR=1,START=performance.now(),renderRAF=0,pageHidden=false,hiddenAt=0;
@@ -276,47 +287,6 @@ function drawAudioVisualizer(now,R){
     if(!IS_POTATO&&glitch){
       g.strokeStyle='rgba(255,70,215,.18)';g.lineWidth=.7;
       g.beginPath();g.arc(0,0,R*(1.32+.06*h),0,6.283);g.stroke();
-    }
-    g.restore();
-  }catch(err){}
-}
-function drawAudioVisualizer(now,R){
-  if(reduce||!activeSfx||activeSfx.paused||activeSfx.ended)return;
-  try{
-    var beat=AV.beat,lv=AV.level,b=AV.bass,m=AV.mid,h=AV.high;
-    var glitch=now<AV.glitchUntil;
-    if(AVP.stamp!==AV.skip)buildAVProfile(now);
-    g.save();g.globalCompositeOperation='lighter';
-
-    /* Dense moire field: a dozen rings sharing one cached profile, so this
-       costs almost nothing beyond the two hero rings below - just what
-       makes it read as "dense" like the reference photo. Cyan and pink
-       alternate and interleave, same as the reference's colour blend. */
-    var DENSE=IS_POTATO?5:17;
-    for(var d=0;d<DENSE;d++){
-      var dp=d/(DENSE-1),pink=d%2===1;
-      var base=1.08+dp*1.65,growth=R*(.05+.16*dp+.12*lv+.10*beat);
-      var alpha=(1-dp*.72)*(.10+.09*lv+.10*beat);
-      strokeCheapRing(R,base,growth,lv,beat,pink?'255,70,215':'110,229,255',alpha,Math.max(.5,R*.007));
-    }
-
-    /* Two "hero" rings actually shaped by the live spectrum, drawn brightest
-       and closest to the horizon so the density above reads as depth. */
-    strokeReactiveRing(R,1.065,.10+.055*m+.025*h,lv,beat,glitch,'110,229,255',.30+.26*lv+.22*beat,R*.019);
-    if(!IS_POTATO)strokeReactiveRing(R,1.14,.075+.04*m,lv,beat,glitch,'255,70,215',.26+.20*lv+.18*beat,R*.014);
-
-    if(!IS_POTATO&&beat>.15){
-      var sr=R*(1.06+.13*beat);
-      g.strokeStyle='rgba(235,245,255,'+(.08+.20*beat)+')';
-      g.lineWidth=Math.max(.7,R*(.012+.014*beat));
-      g.beginPath();g.arc(0,0,sr,0,6.283);g.stroke();
-    }
-    if(!IS_POTATO&&glitch){
-      for(var q=0;q<3;q++){
-        var a=(Math.random()*2-1)*Math.PI,dd=R*(1.08+Math.random()*1.05),len=R*(.25+Math.random()*.7);
-        g.strokeStyle=q===1?'rgba(110,229,255,.24)':'rgba(255,70,215,.20)';
-        g.lineWidth=.7;g.beginPath();g.moveTo(Math.cos(a)*dd,Math.sin(a)*dd);g.lineTo(Math.cos(a)*(dd+len),Math.sin(a)*(dd+len));g.stroke();
-      }
     }
     g.restore();
   }catch(err){}
@@ -1464,11 +1434,13 @@ function triggerSupernova(key){
     PU.push({c:c,a:tr.star,b:tr.star,t:t0,d:760+Math.random()*180,shock:true,snKey:key,ang:a,sp:sp,i:i});
   }
   /* A short luminous core burst makes Rigel/Spica feel like the same event as Betelgeuse. */
-  SN_BURSTS.push({key:key,t:t0,d:760});
+  if(!IS_POTATO)SN_BURSTS.push({key:key,t:t0,d:760});
 }
 var SN_BURSTS=[];
 function drawSupernovaBursts(now){
-  if(!SN_BURSTS.length)return;
+  /* 2-GB devices: keep the supernova flash in CSS, but avoid creating a
+     per-frame radialGradient on the main canvas. */
+  if(IS_POTATO||!SN_BURSTS.length)return;
   for(var i=SN_BURSTS.length-1;i>=0;i--){
     var b=SN_BURSTS[i],u=(now-b.t)/b.d;
     if(u>1){SN_BURSTS.splice(i,1);continue;}
