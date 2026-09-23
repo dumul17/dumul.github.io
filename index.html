@@ -155,6 +155,7 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 </header>
 <span class="cap" id="cap-orion" aria-hidden="true">Orion</span>
 <span class="cap" id="cap-virgo" aria-hidden="true">Virgo</span>
+<span class="cap" id="cap-canis" aria-hidden="true">Canis Major</span>
 <span class="cap" id="cap-bh" aria-hidden="true">Gargantua</span>
 <a id="bh" href="dumul.html" aria-label="Masuk ke DUMUL (lubang hitam Gargantua)" title="Gargantua"></a>
 <span id="bh-clock" aria-hidden="true"></span>
@@ -170,6 +171,7 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 <div id="sn-flash" class="supernova-flash" aria-hidden="true"></div>
 <button id="rigel-fx" type="button" class="hit" aria-label="Putar suara Rigel"></button>
 <button id="betel-fx" type="button" aria-label="Putar suara Betelgeuse"></button>
+<button id="sirius-fx" type="button" class="hit" aria-label="Putar suara Sirius"></button>
 <div id="veil" aria-hidden="true"></div>
 <footer id="footer">
   <nav aria-label="Links">
@@ -196,7 +198,7 @@ var utcClicks=0,utcReset=0;
 var SW=null,swP=0;
 var AMB=mkAudio('constellation.opus',.5,true);
 var GARG=mkAudio('collapsars.opus',0,true);
-var SFX={rigel:mkAudio('rigel.opus',.85,false),spica:mkAudio('spica.opus',.85,false),betel:mkAudio('betelgeuse.opus',.85,false)};
+var SFX={rigel:mkAudio('rigel.opus',.85,false),spica:mkAudio('spica.opus',.85,false),betel:mkAudio('betelgeuse.opus',.85,false),sirius:mkAudio('sirius.opus',.85,false)};
 function mkAudio(name,vol,loop){var a=new Audio(encodeURIComponent(name));a.preload='none';a.loop=!!loop;a.volume=vol;return a;}
 function safePlay(a){if(!a)return false;try{var p=a.play();if(p&&p.catch)p.catch(function(){});return true;}catch(e){return false;}}
 function safePause(a){if(!a)return;try{a.pause();}catch(e){}}
@@ -272,7 +274,7 @@ function audioVizInit(a){
       AV.prev=new Uint8Array(AV.an.frequencyBinCount);
       AV.an.connect(AV.ctx.destination);
     }
-    var key=SFX.rigel===a?'rigel':(SFX.spica===a?'spica':(SFX.betel===a?'betel':null));
+    var key=SFX.rigel===a?'rigel':(SFX.spica===a?'spica':(SFX.betel===a?'betel':(SFX.sirius===a?'sirius':null)));
     if(!key)return false;
     if(!AV.sources[key]){
       try{
@@ -533,7 +535,56 @@ var CONS=[
    vindem:{ra:195.54,dec:10.96,r:2.4,c:'#ffe0a8'},
    heze:{ra:203.67,dec:-0.60,r:2.1,c:'#eaf6ff'},
    spica:{ra:201.30,dec:-11.16,r:3.8,c:'#bfe0ff',name:'Spica',nx:-1}},
-  lines:[['zavijava','zaniah'],['zaniah','porrima'],['porrima','minelauva'],['minelauva','vindem'],['porrima','heze'],['heze','spica']]}
+  lines:[['zavijava','zaniah'],['zaniah','porrima'],['porrima','minelauva'],['minelauva','vindem'],['porrima','heze'],['heze','spica']]},
+ {id:'canis',ra0:103.5,delay:2.2,phase:4.0,
+  stars:{
+   /* head triangle (ears) — real coords */
+   theta:{ra:103.548,dec:-12.039,r:1.5,c:'#eaf6ff'},
+   iota:{ra:104.034,dec:-17.054,r:1.7,c:'#dcefff'},
+   muliphein:{ra:105.940,dec:-15.633,r:1.5,c:'#eaf6ff'},
+   /* chest — real */
+   sirius:{ra:101.287,dec:-16.716,r:4.2,c:'#e8f4ff',name:'Sirius',nx:1,dy:-10},
+   /* front junction: closer to Sirius, toward Mirzam (reference Y-branch) */
+   junc:{ra:99.35,dec:-17.20,r:1.3,c:'#dcefff'},
+   /* 2 front feet: Mirzam real; fleg2 shorter leg angled down from junc */
+   mirzam:{ra:95.675,dec:-17.956,r:2.6,c:'#bfe0ff'},
+   fleg2:{ra:97.55,dec:-19.65,r:1.5,c:'#b8d8ff'},
+   /* body intermediates — more parallel spine/belly like reference */
+   o1:{ra:102.80,dec:-22.90,r:1.6,c:'#cfeeff'},
+   o2:{ra:105.40,dec:-22.60,r:1.7,c:'#cfeeff'},
+   /* hind — real Wezen/Adhara/Aludra; hip + 2 feet tuned to reference */
+   wezen:{ra:107.098,dec:-26.393,r:2.7,c:'#cfeeff'},
+   hip:{ra:105.70,dec:-27.55,r:1.4,c:'#cfeeff'},
+   adhara:{ra:104.656,dec:-28.972,r:3.0,c:'#a8d4ff'},
+   aludra:{ra:111.024,dec:-29.303,r:2.4,c:'#cde6ff'},
+   /* hleg1: more horizontal (right on screen); hleg2: down */
+   hleg1:{ra:101.80,dec:-29.40,r:1.5,c:'#b8d8ff'},
+   hleg2:{ra:105.20,dec:-31.60,r:1.5,c:'#b8d8ff'}},
+  /* front + belly UNCHANGED.
+     hind only: Wezen→Aludra (tail), Wezen→hip (hip also gets belly),
+     hip→Adhara, Adhara branches to 2 hind feet */
+  lines:[
+   /* head */
+   ['theta','iota'],['iota','muliphein'],['muliphein','theta'],
+   ['iota','sirius'],
+   /* PUNGGUNG */
+   ['sirius','o2'],['o2','wezen'],
+   /* chest → front junction */
+   ['sirius','junc'],
+   /* 2 kaki depan */
+   ['junc','mirzam'],
+   ['junc','fleg2'],
+   /* PERUT → meets hip (titik sebelum Adhara) */
+   ['junc','o1'],['o1','hip'],
+   /* ekor (fix) */
+   ['wezen','aludra'],
+   /* Wezen → hip → Adhara */
+   ['wezen','hip'],
+   ['hip','adhara'],
+   /* 2 kaki belakang dari Adhara */
+   ['adhara','hleg1'],
+   ['adhara','hleg2']
+  ]}
 ];
 CONS.forEach(function(c,ci){
   var minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
@@ -552,7 +603,7 @@ CONS.forEach(function(c,ci){
     [l[0],l[1]].forEach(function(k){var s=c.stars[k];s.t0=Math.min(s.t0===c.delay+.2?1e9:s.t0,c.delay+i*.28);});
   });
 });
-var CAPS={orion:$('#cap-orion'),virgo:$('#cap-virgo'),bh:$('#cap-bh')};
+var CAPS={orion:$('#cap-orion'),virgo:$('#cap-virgo'),canis:$('#cap-canis'),bh:$('#cap-bh')};
 
 var PORTALS=[
  {id:'band',cons:'orion',stars:['mintaka','alnilam','alnitak'],from:'mintaka',hit:'alnilam',href:'dumul.html',title:'DUMUL',sub:'music \u00b7 Limerence album',col:'110,229,255',place:'fig-right'},
@@ -561,7 +612,8 @@ var PORTALS=[
 var TRIGGERS={
  betel:{id:'betel',cons:'orion',star:'betel',rgb:'255,72,64'},
  rigel:{id:'rigel',cons:'orion',star:'rigel',rgb:'74,165,255'},
- spica:{id:'spica',cons:'virgo',star:'spica',rgb:'235,92,255'}
+ spica:{id:'spica',cons:'virgo',star:'spica',rgb:'235,92,255'},
+ sirius:{id:'sirius',cons:'canis',star:'sirius',rgb:'180,220,255'}
 };
 function cons(id){for(var i=0;i<CONS.length;i++)if(CONS[i].id===id)return CONS[i];}
 function clockText(){
@@ -623,9 +675,11 @@ function layout(){
   fitTitle();
   var hb=$('#header').getBoundingClientRect().bottom,ft=$('#footer').getBoundingClientRect().top;
   var top=hb+10,bot=ft-8,ah=Math.max(120,bot-top),portrait=W<H*1.05;
+  /* Canis Major: small + high, far from Gargantua to avoid lens stretch.
+     Size kept comparable to Orion / Virgo. */
   var boxes=portrait
-    ?{orion:[W*.05,top,W*.46,top+ah*.40],virgo:[W*.30,top+ah*.75,W*.96,bot-34]}
-    :{orion:[W*.08,top,W*.40,bot],virgo:[W*.60,top+ah*.10,W*.95,bot-ah*.06]};
+    ?{orion:[W*.04,top,W*.40,top+ah*.34],virgo:[W*.30,top+ah*.72,W*.96,bot-34],canis:[W*.58,top+ah*.12,W*.96,top+ah*.42]}
+    :{orion:[W*.05,top,W*.32,bot-ah*.10],virgo:[W*.68,top+ah*.08,W*.97,bot-ah*.08],canis:[W*.38,top+ah*.12,W*.62,top+ah*.48]};
   CONS.forEach(function(c){
     var b=boxes[c.id],bw=b[2]-b[0],bh=b[3]-b[1],sc=Math.min(bw/c.bw,bh/c.bh);
     var x0=b[0]+(bw-c.bw*sc)/2,y0=b[1]+(bh-c.bh*sc)/2;
@@ -638,9 +692,10 @@ function layout(){
   });
   var clk=$('#bh-clock'),ft2=$('#footer').getBoundingClientRect();
   clk.style.transform='translate(calc(14px + env(safe-area-inset-left,0px)),'+Math.round(ft2.top-26)+'px)';
-  var o=cons('orion'),v=cons('virgo');
+  var o=cons('orion'),v=cons('virgo'),cm=cons('canis');
   CAPS.orion.style.transform='translate('+Math.round((o.minX+o.maxX)/2-30)+'px,'+Math.round(o.maxY+22)+'px)';
   CAPS.virgo.style.transform='translate('+Math.round(v.maxX-42)+'px,'+Math.round(v.minY-24)+'px)';
+  CAPS.canis.style.transform='translate('+Math.round((cm.minX+cm.maxX)/2-48)+'px,'+Math.round(cm.maxY+18)+'px)';
   BH.R=portrait?Math.min(30,W*.075):Math.min(38,ah*.075);
   BH.hx=W*.5;BH.hy=portrait?top+ah*.48:top+ah*.27;
   if(!drag.on){BH.x=BH.hx;BH.y=BH.hy;}
@@ -652,6 +707,9 @@ function layout(){
   rfx.style.transform='translate('+Math.round(rg.x)+'px,'+Math.round(rg.y)+'px)';
   var bt=cons('orion').stars.betel,btx=$('#betel-fx');
   btx.style.transform='translate('+Math.round(bt.x)+'px,'+Math.round(bt.y)+'px)';
+  var sr=cons('canis').stars.sirius,sfx=$('#sirius-fx');
+  sfx.style.width=sfx.style.height='52px';sfx.style.marginLeft=sfx.style.marginTop='-26px';
+  sfx.style.transform='translate('+Math.round(sr.x)+'px,'+Math.round(sr.y)+'px)';
   buildSprite();
   PORTALS.forEach(function(p){
     var s=p.c.stars[p.from];
@@ -1413,7 +1471,7 @@ function drawStars(c,age,now){
   var audioFocus=potatoAudioFocus();
   Object.keys(c.stars).forEach(function(k){
     var s=c.stars[k],a=clamp((age-s.t0)/.5);s._a=a;if(a<=0)return;
-    var triggerKey=(k==='betel'?'betel':(k==='rigel'?'rigel':(k==='spica'?'spica':null)));
+    var triggerKey=(k==='betel'?'betel':(k==='rigel'?'rigel':(k==='spica'?'spica':(k==='sirius'?'sirius':null))));
     var tr=triggerKey?TRIGGERS[triggerKey]:null;
     var isPlaying=!!(tr&&activeSfx===SFX[triggerKey]&&!SFX[triggerKey].paused);
     var cheap=audioFocus&&!isPlaying;
@@ -1719,11 +1777,11 @@ function updateHover(px,py){
       if(d<5&&d<best){best=d;hit={c:c,line:i};}
     });
   });
-  if(hit){hot=hit.star==='betel'?'betel':(hit.star==='rigel'?'rigel':(hit.star==='spica'?'spica':hot));if(hit.line!=null)hit.c._hot=hit.line;}
-  else if(hot!=='bh'&&hot!=='spica'&&hot!=='rigel'&&hot!=='betel')hot=null;
+  if(hit){hot=hit.star==='betel'?'betel':(hit.star==='rigel'?'rigel':(hit.star==='spica'?'spica':(hit.star==='sirius'?'sirius':hot)));if(hit.line!=null)hit.c._hot=hit.line;}
+  else if(hot!=='bh'&&hot!=='spica'&&hot!=='rigel'&&hot!=='betel'&&hot!=='sirius')hot=null;
 }
 document.addEventListener('pointerdown',function(e){
-  if(SW||drag.on||e.target.closest('#betel-fx,#rigel-fx,#bh,.portal,.hit,#owl-source,#bh-clock'))return;
+  if(SW||drag.on||e.target.closest('#betel-fx,#rigel-fx,#sirius-fx,#bh,.portal,.hit,#owl-source,#bh-clock'))return;
   var now=performance.now(),hit=null,best=18;
   CONS.forEach(function(c){
     Object.keys(c.stars).forEach(function(k){
@@ -1736,6 +1794,7 @@ document.addEventListener('pointerdown',function(e){
     if(hit.star==='betel'){triggerSupernova('betel');}
     else if(hit.star==='rigel'){triggerSupernova('rigel');}
     else if(hit.star==='spica'){triggerSupernova('spica');}
+    else if(hit.star==='sirius'){triggerSupernova('sirius');}
     else haptic(8);
   }
 },{passive:true});
@@ -1784,7 +1843,7 @@ function beginBHDrag(e){
   if(reduce||SW||drag.on)return false;
   /* Explicit interactive star/portal layers always win over Gargantua's wide grab field.
      This is important when Rigel starts close to the black hole on the initial layout. */
-  if(e.target.closest && e.target.closest('#rigel-fx,#betel-fx,.hit,.portal,#owl-source,#bh-clock'))return false;
+  if(e.target.closest && e.target.closest('#rigel-fx,#betel-fx,#sirius-fx,.hit,.portal,#owl-source,#bh-clock'))return false;
   /* Asteroid clicks get first refusal too, so a rock near Gargantua cannot start a BH drag. */
   if(asteroidScreenAt(e.clientX,e.clientY)>=0)return false;
   /* Star interactions always win over Gargantua's large invisible field. */
@@ -1837,6 +1896,11 @@ btFx.addEventListener('mouseenter',function(){hot='betel';});
 btFx.addEventListener('mouseleave',function(){if(hot==='betel')hot=null;});
 btFx.addEventListener('click',function(){if(!SW)triggerSupernova('betel');});
 
+var srFx=$('#sirius-fx');
+srFx.addEventListener('mouseenter',function(){hot='sirius';});
+srFx.addEventListener('mouseleave',function(){if(hot==='sirius')hot=null;});
+srFx.addEventListener('click',function(){if(!SW)triggerSupernova('sirius');});
+
 /* ---------- easter eggs ---------- */
 function triggerKonami(){
   document.body.classList.add('konami');haptic(18);
@@ -1852,7 +1916,7 @@ window.addEventListener('keydown',function(e){
    Gargantua (drag) atau star/portal lain diabaikan supaya tidak bentrok. */
 var swipeStart=null;
 document.addEventListener('pointerdown',function(e){
-  if(drag.on||(e.target.closest&&e.target.closest('#rigel-fx,#betel-fx,.hit,.portal,#owl-source,#bh-clock,#bh')))return;
+  if(drag.on||(e.target.closest&&e.target.closest('#rigel-fx,#betel-fx,#sirius-fx,.hit,.portal,#owl-source,#bh-clock,#bh')))return;
   swipeStart={x:e.clientX,y:e.clientY,id:e.pointerId};
 },{passive:true});
 document.addEventListener('pointerup',function(e){
@@ -1964,7 +2028,7 @@ window.addEventListener('pageshow',function(e){
     var rtM;window.addEventListener('resize',function(){clearTimeout(rtM);rtM=setTimeout(function(){if(matrixAlive)resizeMatrix();},150);});
   }
 
-  var stars=[SFX.betel,SFX.rigel,SFX.spica],t0=performance.now(),done=false;
+  var stars=[SFX.betel,SFX.rigel,SFX.spica,SFX.sirius],t0=performance.now(),done=false;
   var minMs=IS_POTATO?7000:4200;
   var maxMs=IS_POTATO?12000:8000;
   stars.forEach(function(a){try{a.preload='auto';a.load();}catch(e){}});
