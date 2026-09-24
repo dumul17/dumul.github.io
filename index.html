@@ -194,6 +194,7 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 <button id="rigel-fx" type="button" class="hit" aria-label="Putar suara Rigel"></button>
 <button id="betel-fx" type="button" aria-label="Putar suara Betelgeuse"></button>
 <button id="sirius-fx" type="button" class="hit" aria-label="Putar suara Sirius"></button>
+<button id="pleione-fx" type="button" class="hit" aria-label="Putar suara Pleione"></button>
 <div id="veil" aria-hidden="true"></div>
 <section id="music-player" aria-label="Music player" aria-hidden="true">
   <div class="mp-head"><div><span class="mp-kicker">Dumul's Observatory</span><strong>Music</strong></div><button id="music-close" type="button" aria-label="Tutup music player">×</button></div>
@@ -239,8 +240,35 @@ var AMB=mkAudio('constellation.opus',.5,true);
 var GARG=mkAudio('collapsars.opus',0,true);
 var MUSIC_COLLAP=mkAudio('collapsars.opus',.5,true);
 var SFX={rigel:mkAudio('rigel.opus',.85,false),spica:mkAudio('spica.opus',.85,false),betel:mkAudio('betelgeuse.opus',.85,false),sirius:mkAudio('sirius.opus',.85,false),pleione:mkAudio('pleione.opus',.85,false)};
-function mkAudio(name,vol,loop){var a=new Audio(encodeURIComponent(name));a.preload='none';a.loop=!!loop;a.volume=vol;return a;}
-function safePlay(a){if(!a)return false;try{var p=a.play();if(p&&p.catch)p.catch(function(){});return true;}catch(e){return false;}}
+function mkAudio(name,vol,loop){var a=new Audio(encodeURIComponent(name));a.preload='auto';a.loop=!!loop;a.volume=vol;return a;}
+function safePlay(a){
+  if(!a)return false;
+  try{
+    /* First tap on a cold file often rejects until the buffer is ready.
+       Kick load(), then retry on canplay so Pleione (and any slow SFX)
+       starts on the same user gesture without needing a second click. */
+    if(a.readyState<2){
+      try{a.load();}catch(eLoad){}
+      var retry=function(){
+        a.removeEventListener('canplay',retry);
+        a.removeEventListener('canplaythrough',retry);
+        if(a.paused||a.ended){
+          var p2=a.play();if(p2&&p2.catch)p2.catch(function(){});
+        }
+      };
+      a.addEventListener('canplay',retry,{once:true});
+      a.addEventListener('canplaythrough',retry,{once:true});
+    }
+    var p=a.play();
+    if(p&&p.catch)p.catch(function(){
+      setTimeout(function(){
+        if(!a.paused&&!a.ended)return;
+        try{var p3=a.play();if(p3&&p3.catch)p3.catch(function(){});}catch(e2){}
+      },120);
+    });
+    return true;
+  }catch(e){return false;}
+}
 function safePause(a){if(!a)return;try{a.pause();}catch(e){}}
 function safeReset(a){if(!a)return;safePause(a);try{a.currentTime=0;}catch(e){}}
 function haptic(ms){
@@ -905,6 +933,17 @@ function layout(){
   var sr=cons('canis').stars.sirius,sfx=$('#sirius-fx');
   sfx.style.width=sfx.style.height='52px';sfx.style.marginLeft=sfx.style.marginTop='-26px';
   sfx.style.transform='translate('+Math.round(sr.x)+'px,'+Math.round(sr.y)+'px)';
+  /* Dedicated DOM hit target for Pleione — same reliability as Rigel/Betel/Sirius. */
+  var pfx=$('#pleione-fx');
+  if(pfx&&PLEIADES.ready){
+    var ox=mouse.x*1.4,oy=mouse.y*1.0;
+    var pl=PLEIADES.bright.filter(function(z){return z.interactive;})[0];
+    if(pl){
+      var px=PLEIADES.x+pl.x*PLEIADES.scale+ox,py=PLEIADES.y+pl.y*PLEIADES.scale+oy;
+      pfx.style.width=pfx.style.height='52px';pfx.style.marginLeft=pfx.style.marginTop='-26px';
+      pfx.style.transform='translate('+Math.round(px)+'px,'+Math.round(py)+'px)';
+    }
+  }
   buildSprite();
   PORTALS.forEach(function(p){
     var s=p.c.stars[p.from];
@@ -1829,11 +1868,14 @@ function drawPleiades(age,now){
 function pleiadesHitAt(px,py){
   if(!PLEIADES.ready)return null;
   var ox=mouse.x*1.4,oy=mouse.y*1.0;
+  /* Match the generous hit radius used by Orion/Virgo/Canis trigger stars
+     so the first tap registers reliably on phones. */
+  var hitR=Math.max(22,PLEIADES.scale*.11);
   for(var i=0;i<PLEIADES.bright.length;i++){
     var st=PLEIADES.bright[i];if(!st.interactive)continue;
     var q=gravityPos(PLEIADES.x+st.x*PLEIADES.scale+ox,PLEIADES.y+st.y*PLEIADES.scale+oy);
     if(!q||q[2]>=1)continue;
-    if(Math.hypot(px-q[0],py-q[1])<Math.max(14,PLEIADES.scale*.065))return st;
+    if(Math.hypot(px-q[0],py-q[1])<hitR)return st;
   }
   return null;
 }
@@ -2324,6 +2366,13 @@ var srFx=$('#sirius-fx');
 srFx.addEventListener('mouseenter',function(){hot='sirius';});
 srFx.addEventListener('mouseleave',function(){if(hot==='sirius')hot=null;});
 srFx.addEventListener('click',function(){if(!SW)triggerSupernova('sirius');});
+
+var plFx=$('#pleione-fx');
+if(plFx){
+  plFx.addEventListener('mouseenter',function(){hot='pleione';});
+  plFx.addEventListener('mouseleave',function(){if(hot==='pleione')hot=null;});
+  plFx.addEventListener('click',function(){if(!SW)triggerSupernova('pleione');});
+}
 
 /* ---------- easter eggs ---------- */
 function triggerKonami(){
