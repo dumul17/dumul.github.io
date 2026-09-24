@@ -106,8 +106,8 @@ Keep **all opus files** next to the HTML on the same origin so `Audio()` and the
 
 ## Contact
 
-- **YouTube** — [youtube.com/@dumul17](https://www.youtube.com/@dumul17)
-- **Instagram** — [instagram.com/dumuldumbowl](https://www.instagram.com/dumuldumbowl/)
+- [YouTube](https://www.youtube.com/@dumul17)
+- [Instagram](https://www.instagram.com/dumuldumbowl/)
 
 ---
 
