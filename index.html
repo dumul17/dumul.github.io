@@ -1996,10 +1996,11 @@ bhA.addEventListener('blur',function(){if(hot==='bh')hot=null;});
    stays small, but the gesture is detected by distance so canvas/star layers cannot
    shrink the touch target. */
 function bhGrabRadius(){
-  /* Grab the gravitational field, not the visible disk.  It is deliberately
-     much larger on desktop, while remaining usable on narrow phones. */
+  /* Only the area immediately around the black hole can START a Gargantua drag.
+     Once the drag is active, moveBHDrag() still lets it travel across the whole canvas.
+     This keeps the Konami swipe area open without shrinking Gargantua's movement range. */
   var base=Math.min(W,H);
-  return Math.max(155,Math.min(base*.30,Math.max(BH.R*10,190)));
+  return Math.max(BH.R*2.8,Math.min(base*.18,110));
 }
 function constellationTargetAt(x,y){
   var found=false;
@@ -2079,32 +2080,92 @@ srFx.addEventListener('click',function(){if(!SW)triggerSupernova('sirius');});
 
 /* ---------- easter eggs ---------- */
 function triggerKonami(){
-  document.body.classList.add('konami');haptic(18);
-  showSecret('SYSTEM OVERRIDE · DUMUL//OBSERVATORY',1400);
-  setTimeout(function(){document.body.classList.remove('konami');},1650);
+  document.body.classList.add('konami');
+  haptic(18);
+  showSecret('SYSTEM OVERRIDE · DUMUL//OBSERVATORY',1800);
+  clearTimeout(triggerKonami._t);
+  triggerKonami._t=setTimeout(function(){document.body.classList.remove('konami');},2100);
 }
+
+/* Hidden Konami input.
+   Desktop: real arrow-key events.
+   Touch/pointer: one swipe = one direction. On browsers that expose both
+   Pointer Events and Touch Events, use Pointer Events only so a single swipe
+   cannot be counted twice. */
+function pushKonamiDir(dir){
+  if(konami.indexOf(dir)<0)return;
+  konamiSeq.push(dir);
+  if(konamiSeq.length>konami.length)konamiSeq.shift();
+  if(konamiSeq.join('|')===konami.join('|')){
+    konamiSeq=[];
+    triggerKonami();
+  }
+}
+
 window.addEventListener('keydown',function(e){
-  konamiSeq.push(e.key);if(konamiSeq.length>konami.length)konamiSeq.shift();
-  if(konamiSeq.join('|')===konami.join('|')){konamiSeq=[];triggerKonami();}
-});
-/* Versi mobile: swipe panah (atas atas bawah bawah kiri kanan kiri kanan) mengisi
-   buffer yang sama, karena HP tidak punya tombol panah. Gesture yang sudah dipakai
-   Gargantua (drag) atau star/portal lain diabaikan supaya tidak bentrok. */
-var swipeStart=null;
-document.addEventListener('pointerdown',function(e){
-  if(drag.on||(e.target.closest&&e.target.closest('#rigel-fx,#betel-fx,#sirius-fx,.hit,.portal,#owl-source,#bh-clock,#bh,#music-toggle,#music-player')))return;
-  swipeStart={x:e.clientX,y:e.clientY,id:e.pointerId};
-},{passive:true});
-document.addEventListener('pointerup',function(e){
-  if(!swipeStart||e.pointerId!==swipeStart.id)return;
-  var dx=e.clientX-swipeStart.x,dy=e.clientY-swipeStart.y;swipeStart=null;
+  if(e.defaultPrevented||e.repeat)return;
+  var k=e.key;
+  if(k==='Up')k='ArrowUp';
+  else if(k==='Down')k='ArrowDown';
+  else if(k==='Left')k='ArrowLeft';
+  else if(k==='Right')k='ArrowRight';
+  if(konami.indexOf(k)<0)return;
+  e.preventDefault();
+  e.stopPropagation();
+  pushKonamiDir(k);
+},true);
+
+var konamiSwipeStart=null;
+function konamiBlockedTarget(target){
+  return !!(target&&target.closest&&target.closest(
+    '#rigel-fx,#betel-fx,#sirius-fx,.hit,.portal,#owl-source,#bh-clock,#bh,#music-toggle,#music-player'
+  ));
+}
+function konamiSwipeDirection(dx,dy){
   var adx=Math.abs(dx),ady=Math.abs(dy),travel=Math.max(adx,ady);
-  /* Mobile Konami = 8 deliberate flicks, not a continuous drag. */
-  if(travel<42 || Math.min(adx,ady)>travel*.72)return;
-  var dir=adx>ady?(dx>0?'ArrowRight':'ArrowLeft'):(dy>0?'ArrowDown':'ArrowUp');
-  konamiSeq.push(dir);if(konamiSeq.length>konami.length)konamiSeq.shift();
-  if(konamiSeq.join('|')===konami.join('|')){konamiSeq=[];triggerKonami();}
-},{passive:true});
+  /* 24px keeps the Easter egg usable on a phone without making tiny taps count. */
+  if(travel<24)return null;
+  /* Require a clearly dominant axis, but allow natural diagonal hand movement. */
+  if(Math.min(adx,ady)>travel*.72)return null;
+  return adx>ady
+    ?(dx>0?'ArrowRight':'ArrowLeft')
+    :(dy>0?'ArrowDown':'ArrowUp');
+}
+
+/* Pointer Events path. This is the primary mobile path on modern Android/iOS. */
+if(window.PointerEvent){
+  document.addEventListener('pointerdown',function(e){
+    if(e.pointerType==='mouse')return;
+    if(drag.on||konamiBlockedTarget(e.target))return;
+    konamiSwipeStart={x:e.clientX,y:e.clientY,id:e.pointerId};
+  },{passive:true});
+  document.addEventListener('pointerup',function(e){
+    if(e.pointerType==='mouse')return;
+    if(!konamiSwipeStart||e.pointerId!==konamiSwipeStart.id)return;
+    var dx=e.clientX-konamiSwipeStart.x,dy=e.clientY-konamiSwipeStart.y;
+    konamiSwipeStart=null;
+    var dir=konamiSwipeDirection(dx,dy);
+    if(dir)pushKonamiDir(dir);
+  },{passive:true});
+  document.addEventListener('pointercancel',function(e){
+    if(konamiSwipeStart&&e.pointerId===konamiSwipeStart.id)konamiSwipeStart=null;
+  },{passive:true});
+}else{
+  /* Legacy touch fallback only when Pointer Events do not exist. */
+  document.addEventListener('touchstart',function(e){
+    if(e.touches.length!==1||konamiBlockedTarget(e.target))return;
+    var t=e.touches[0];
+    konamiSwipeStart={x:t.clientX,y:t.clientY,id:'touch'};
+  },{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(!konamiSwipeStart||!e.changedTouches.length)return;
+    var t=e.changedTouches[0],dx=t.clientX-konamiSwipeStart.x,dy=t.clientY-konamiSwipeStart.y;
+    konamiSwipeStart=null;
+    var dir=konamiSwipeDirection(dx,dy);
+    if(dir)pushKonamiDir(dir);
+  },{passive:true});
+}
+
 $('#bh-clock').addEventListener('pointerdown',function(e){
   e.stopPropagation();var now=performance.now();
   if(now-utcReset>2200)utcClicks=0;
