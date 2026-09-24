@@ -1894,6 +1894,13 @@ var SN_COOLDOWN={};
   function pause(){safePause(current());sync();}
   toggle.addEventListener('click',function(){panel.classList.contains('open')?shut():open();});
   close.addEventListener('click',shut);
+  /* Dismiss the HUD when tapping/clicking anywhere outside it. */
+  document.addEventListener('pointerdown',function(e){
+    if(!panel.classList.contains('open'))return;
+    var target=e.target;
+    if(panel.contains(target)||toggle.contains(target))return;
+    shut();
+  },true);
   playBtn.addEventListener('click',function(){isPlaying()?pause():start();});
   rows.forEach(function(row,i){row.addEventListener('click',function(){select(i);});});
   tracks.forEach(function(a){a.addEventListener('play',sync);a.addEventListener('pause',sync);a.addEventListener('ended',sync);});
