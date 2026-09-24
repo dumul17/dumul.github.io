@@ -590,7 +590,7 @@ var CONS=[
    bow1:{fx:781,fy:389,r:1.35,c:'#dcefff'},bow2:{fx:805,fy:407,r:1.25,c:'#dcefff'},bow3:{fx:807,fy:459,r:1.25,c:'#dcefff'},
    bow4:{fx:806,fy:507,r:1.25,c:'#dcefff'},bow5:{fx:789,fy:564,r:1.25,c:'#dcefff'},bow6:{fx:750,fy:597,r:1.25,c:'#dcefff'},
    alnitak:{fx:454,fy:664,r:2.7,c:'#cfeeff'},alnilam:{fx:492,fy:651,r:2.9,c:'#cfeeff'},mintaka:{fx:523,fy:638,r:2.5,c:'#cfeeff'},
-   saiph:{fx:416,fy:860,r:2.4,c:'#cde6ff'},rigel:{fx:638,fy:827,r:3.7,c:'#bfe0ff',name:'Rigel',nx:1}
+   saiph:{fx:416,fy:860,r:2.4,c:'#cde6ff'},rigel:{fx:638,fy:827,r:3.7,c:'#bfe0ff',name:'Rigel',nx:-1,dy:2}
   },
   lines:[["meissa","baham1"],["meissa2","baham2"],["baham1","siku"],["siku","betel"],["betel","bella2"],["bella2","bella"],["bella","bow3"],["bow1","bow2"],["bow2","bow3"],["bow3","bow4"],["bow4","bow5"],["bow5","bow6"],["betel","alnitak"],["bella","mintaka"],["alnitak","alnilam"],["alnilam","mintaka"],["alnitak","saiph"],["mintaka","rigel"],["saiph","rigel"]],
   nebula:{fx:500,fy:600}},
@@ -855,10 +855,17 @@ function layout(){
   PORTALS.forEach(function(p){
     var s=p.c.stars[p.from];
     p.sx=s.x;p.sy=s.y;
-    p.lx=p.place==='fig-right'?p.c.maxX+18:s.x+20;
-    p.ly=s.y;
-    /* Hard cap so DUMUL/YouTube panels stay compact and never cover Sirius / other triggers */
-    var mw=Math.min(W<600?112:138,Math.max(84,W-p.lx-16));
+    /* DUMUL sits to the right of Orion's belt, nudged up so it never covers Rigel's
+       label/spectrum (Rigel is the lower-right star of the figure). */
+    if(p.place==='fig-right'){
+      p.lx=p.c.maxX+22;
+      p.ly=s.y-10;
+    }else{
+      p.lx=s.x+20;
+      p.ly=s.y;
+    }
+    /* Hard cap so DUMUL/YouTube panels stay compact and never cover Sirius / Rigel / other triggers */
+    var mw=Math.min(W<600?100:128,Math.max(80,W-p.lx-16));
     p.el.style.maxWidth=mw+'px';
   });
   var bgOrientation=W<H?'portrait':'landscape';
@@ -1659,12 +1666,12 @@ function drawStars(c,age,now){
        * Mini spectrum:
        * - only visible while its own audio is actually PLAYING
        * - always sits outside the label with a measured gap
-       * - Spica points left; Betelgeuse/Rigel point right
+       * - Spica/Rigel open left (away from DUMUL portal); Betelgeuse opens right
        */
       if(tr&&isPlaying){
         var bars=7, gap=1.8, bw=1.35, total=bars*bw+(bars-1)*gap;
         var labelW=g.measureText(s.name).width, gapFromText=8;
-        /* nx<0 means the label is right-aligned (Spica), otherwise left-aligned. */
+        /* nx<0 → right-aligned label, spectrum further left (Spica/Rigel). */
         var sx=(s.nx<0)
           ? (labelX-labelW-gapFromText-total)
           : (labelX+labelW+gapFromText);
