@@ -579,90 +579,52 @@ function rgb(hex){var n=parseInt(hex.slice(1),16);return((n>>16)&255)+','+((n>>8
 /* ---------- data: koordinat asli (RA derajat, Dec derajat) ---------- */
 var CONS=[
  {id:'orion',ra0:84.5,delay:.3,phase:0,
+  /* Fixed traced geometry: 1000×1000 source, preserved 1:1 then fit responsively. */
   stars:{
-   meissa:{ra:83.78,dec:9.93,r:1.7,c:'#eaf6ff'},
-   betel:{ra:88.79,dec:7.41,r:3.5,c:'#ffb27a',name:'Betelgeuse',nx:1,dy:-9},
-   bella:{ra:81.28,dec:6.35,r:2.5,c:'#dcefff'},
-   mintaka:{ra:83.00,dec:-0.30,r:2.5,c:'#cfeeff'},
-   alnilam:{ra:84.05,dec:-1.20,r:2.9,c:'#cfeeff'},
-   alnitak:{ra:85.19,dec:-1.94,r:2.7,c:'#cfeeff'},
-   saiph:{ra:86.94,dec:-9.67,r:2.4,c:'#cde6ff'},
-   rigel:{ra:78.63,dec:-8.20,r:3.7,c:'#bfe0ff',name:'Rigel',nx:1},
-   hatysa:{ra:83.86,dec:-5.91,r:1.6,c:'#eaf6ff'}},
-  lines:[['meissa','betel'],['meissa','bella'],['betel','bella'],['betel','alnitak'],['bella','mintaka'],['mintaka','alnilam'],['alnilam','alnitak'],['alnitak','saiph'],['mintaka','rigel'],['saiph','rigel'],['alnilam','hatysa']],
-  nebula:{ra:83.82,dec:-5.45}},
+   meissa:{fx:230,fy:198,r:1.7,c:'#eaf6ff'},meissa2:{fx:311,fy:175,r:1.5,c:'#eaf6ff'},
+   baham1:{fx:248,fy:306,r:1.35,c:'#dcefff'},baham2:{fx:285,fy:282,r:1.35,c:'#dcefff'},
+   siku:{fx:315,fy:404,r:1.35,c:'#dcefff'},
+   betel:{fx:365,fy:455,r:3.5,c:'#ffb27a',name:'Betelgeuse',nx:1,dy:-9},
+   bella2:{fx:501,fy:392,r:1.55,c:'#dcefff'},bella:{fx:559,fy:479,r:2.5,c:'#dcefff'},
+   bow1:{fx:781,fy:389,r:1.35,c:'#dcefff'},bow2:{fx:805,fy:407,r:1.25,c:'#dcefff'},bow3:{fx:807,fy:459,r:1.25,c:'#dcefff'},
+   bow4:{fx:806,fy:507,r:1.25,c:'#dcefff'},bow5:{fx:789,fy:564,r:1.25,c:'#dcefff'},bow6:{fx:750,fy:597,r:1.25,c:'#dcefff'},
+   alnitak:{fx:454,fy:664,r:2.7,c:'#cfeeff'},alnilam:{fx:492,fy:651,r:2.9,c:'#cfeeff'},mintaka:{fx:523,fy:638,r:2.5,c:'#cfeeff'},
+   saiph:{fx:416,fy:860,r:2.4,c:'#cde6ff'},rigel:{fx:638,fy:827,r:3.7,c:'#bfe0ff',name:'Rigel',nx:1}
+  },
+  lines:[["meissa","baham1"],["meissa2","baham2"],["baham1","siku"],["siku","betel"],["betel","bella2"],["bella2","bella"],["bella","bow3"],["bow1","bow2"],["bow2","bow3"],["bow3","bow4"],["bow4","bow5"],["bow5","bow6"],["betel","alnitak"],["bella","mintaka"],["alnitak","alnilam"],["alnilam","mintaka"],["alnitak","saiph"],["mintaka","rigel"],["saiph","rigel"]],
+  nebula:{fx:500,fy:600}},
  {id:'virgo',ra0:190.7,delay:1.4,phase:2.1,
   stars:{
-   zavijava:{ra:177.67,dec:1.76,r:1.9,c:'#eaf6ff'},
-   zaniah:{ra:184.98,dec:-0.67,r:1.8,c:'#eaf6ff'},
-   porrima:{ra:190.42,dec:-1.45,r:2.6,c:'#f0f6ff'},
-   minelauva:{ra:193.90,dec:3.40,r:1.9,c:'#ffe9c9'},
-   vindem:{ra:195.54,dec:10.96,r:2.4,c:'#ffe0a8'},
-   heze:{ra:203.67,dec:-0.60,r:2.1,c:'#eaf6ff'},
-   spica:{ra:201.30,dec:-11.16,r:3.8,c:'#bfe0ff',name:'Spica',nx:-1}},
-  lines:[['zavijava','zaniah'],['zaniah','porrima'],['porrima','minelauva'],['minelauva','vindem'],['porrima','heze'],['heze','spica']]},
+   kiriJauh:{fx:260,fy:565,r:1.35,c:'#eaf6ff'},kiriTengah:{fx:382,fy:509,r:1.35,c:'#eaf6ff'},tengahKiri:{fx:461,fy:511,r:1.5,c:'#f0f6ff'},
+   zavijava:{fx:512,fy:265,r:1.9,c:'#eaf6ff'},tengahAtas:{fx:600,fy:447,r:1.55,c:'#eaf6ff'},tengahKanan:{fx:665,fy:500,r:1.55,c:'#eaf6ff'},
+   kananJauh:{fx:735,fy:326,r:1.9,c:'#ffe0c0'},atasSpica:{fx:542,fy:562,r:1.4,c:'#eaf6ff'},
+   spica:{fx:519,fy:666,r:3.8,c:'#bfe0ff',name:'Spica',nx:-1},bawahTengah:{fx:384,fy:736,r:1.5,c:'#eaf6ff'},
+   bawahKiriTengah:{fx:366,fy:657,r:1.35,c:'#eaf6ff'},bawahKiriUjung:{fx:293,fy:699,r:1.35,c:'#eaf6ff'},kananTengah:{fx:700,fy:400,r:1.55,c:'#ffe9c9'}
+  },
+  lines:[["kiriJauh","kiriTengah"],["kiriTengah","tengahKiri"],["tengahKiri","tengahAtas"],["tengahAtas","zavijava"],["tengahAtas","tengahKanan"],["tengahKanan","kananTengah"],["kananTengah","kananJauh"],["tengahKanan","atasSpica"],["tengahKiri","spica"],["atasSpica","spica"],["bawahKiriUjung","bawahKiriTengah"],["bawahKiriTengah","bawahTengah"],["bawahTengah","spica"]]},
  {id:'canis',ra0:103.5,delay:2.2,phase:4.0,
   stars:{
-   /* head triangle (ears) — real coords */
-   theta:{ra:103.548,dec:-12.039,r:1.5,c:'#eaf6ff'},
-   iota:{ra:104.034,dec:-17.054,r:1.7,c:'#dcefff'},
-   muliphein:{ra:105.940,dec:-15.633,r:1.5,c:'#eaf6ff'},
-   /* chest — real */
-   sirius:{ra:101.287,dec:-16.716,r:4.2,c:'#e8f4ff',name:'Sirius',nx:1,dy:-10},
-   /* front junction: closer to Sirius, toward Mirzam (reference Y-branch) */
-   junc:{ra:99.35,dec:-17.20,r:1.3,c:'#dcefff'},
-   /* 2 front feet: Mirzam real; fleg2 shorter leg angled down from junc */
-   mirzam:{ra:95.675,dec:-17.956,r:2.6,c:'#bfe0ff'},
-   fleg2:{ra:97.55,dec:-19.65,r:1.5,c:'#b8d8ff'},
-   /* body intermediates — more parallel spine/belly like reference */
-   o1:{ra:102.80,dec:-22.90,r:1.6,c:'#cfeeff'},
-   o2:{ra:105.40,dec:-22.60,r:1.7,c:'#cfeeff'},
-   /* hind — real Wezen/Adhara/Aludra; hip + 2 feet tuned to reference */
-   wezen:{ra:107.098,dec:-26.393,r:2.7,c:'#cfeeff'},
-   hip:{ra:105.70,dec:-27.55,r:1.7,c:'#cfeeff'},
-   adhara:{ra:104.656,dec:-28.972,r:2.6,c:'#a8d4ff'},
-   aludra:{ra:111.024,dec:-29.303,r:2.4,c:'#cde6ff'},
-   /* hleg1: horizontal (right on screen); hleg2: down — same joint size as other line nodes */
-   hleg1:{ra:101.80,dec:-29.40,r:1.7,c:'#cfeeff'},
-   hleg2:{ra:105.20,dec:-31.60,r:1.7,c:'#cfeeff'}},
-  /* front + belly UNCHANGED.
-     hind only: Wezen→Aludra (tail), Wezen→hip (hip also gets belly),
-     hip→Adhara, Adhara branches to 2 hind feet */
-  lines:[
-   /* head */
-   ['theta','iota'],['iota','muliphein'],['muliphein','theta'],
-   ['iota','sirius'],
-   /* PUNGGUNG */
-   ['sirius','o2'],['o2','wezen'],
-   /* chest → front junction */
-   ['sirius','junc'],
-   /* 2 kaki depan */
-   ['junc','mirzam'],
-   ['junc','fleg2'],
-   /* PERUT → meets hip (titik sebelum Adhara) */
-   ['junc','o1'],['o1','hip'],
-   /* ekor (fix) */
-   ['wezen','aludra'],
-   /* Wezen → hip → Adhara */
-   ['wezen','hip'],
-   ['hip','adhara'],
-   /* 2 kaki belakang dari Adhara */
-   ['adhara','hleg1'],
-   ['adhara','hleg2']
-  ]}
+   theta:{fx:322,fy:183,r:1.5,c:'#eaf6ff'},iota:{fx:271,fy:314,r:1.7,c:'#dcefff'},muliphein:{fx:351,fy:343,r:1.7,c:'#eaf6ff'},
+   sirius:{fx:445,fy:316,r:4.2,c:'#e8f4ff',name:'Sirius',nx:1,dy:-10},mirzam:{fx:660,fy:313,r:2.6,c:'#bfe0ff'},mulipheinBody:{fx:548,fy:388,r:1.7,c:'#eaf6ff'},
+   furud:{fx:587,fy:477,r:1.55,c:'#cfeeff'},wezenTop:{fx:359,fy:564,r:1.35,c:'#cfeeff'},wezen:{fx:342,fy:617,r:2.7,c:'#cfeeff'},
+   tengahAtas:{fx:438,fy:520,r:1.6,c:'#cfeeff'},tengahBawah:{fx:414,fy:665,r:1.6,c:'#cfeeff'},adhara:{fx:448,fy:697,r:2.6,c:'#a8d4ff'},
+   aludra:{fx:245,fy:776,r:2.4,c:'#cde6ff'},ekorKanan:{fx:768,fy:671,r:1.5,c:'#cfeeff'},ekorBawah:{fx:552,fy:803,r:1.5,c:'#cfeeff'}
+  },
+  lines:[["theta","iota"],["theta","muliphein"],["iota","muliphein"],["muliphein","sirius"],["sirius","mulipheinBody"],["mirzam","mulipheinBody"],["sirius","wezenTop"],["wezenTop","wezen"],["mulipheinBody","furud"],["mulipheinBody","tengahAtas"],["tengahAtas","tengahBawah"],["tengahBawah","adhara"],["wezen","adhara"],["wezen","aludra"],["adhara","ekorKanan"],["adhara","ekorBawah"]]}
 ];
+
 CONS.forEach(function(c,ci){
   var minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
   Object.keys(c.stars).forEach(function(k,i){
     var s=c.stars[k];
-    s.rx=-(s.ra-c.ra0)*Math.cos(s.dec*Math.PI/180);s.ry=-s.dec;
+    if(typeof s.fx==='number'&&typeof s.fy==='number'){s.rx=s.fx;s.ry=s.fy;}else{s.rx=-(s.ra-c.ra0)*Math.cos(s.dec*Math.PI/180);s.ry=-s.dec;}
     s.rgb=rgb(s.c);s.ph=Math.random()*6.28;s.t0=c.delay+.2;
     s.twinkleSpeed=.00125+Math.random()*.00165;
     s.twinkleDepth=.07+Math.random()*.12;
     s.twinkleJitter=Math.random()<.16;s._tw=0;s._twHit=-1;
     minx=Math.min(minx,s.rx);maxx=Math.max(maxx,s.rx);miny=Math.min(miny,s.ry);maxy=Math.max(maxy,s.ry);
   });
-  if(c.nebula){c.nebula.rx=-(c.nebula.ra-c.ra0);c.nebula.ry=-c.nebula.dec;}
+  if(c.nebula){if(typeof c.nebula.fx==='number'&&typeof c.nebula.fy==='number'){c.nebula.rx=c.nebula.fx;c.nebula.ry=c.nebula.fy;}else{c.nebula.rx=-(c.nebula.ra-c.ra0);c.nebula.ry=-c.nebula.dec;}}
   c.minx=minx;c.miny=miny;c.bw=maxx-minx;c.bh=maxy-miny;c.ox=0;c.oy=0;
   c.lines.forEach(function(l,i){
     [l[0],l[1]].forEach(function(k){var s=c.stars[k];s.t0=Math.min(s.t0===c.delay+.2?1e9:s.t0,c.delay+i*.28);});
@@ -821,8 +783,8 @@ function layout(){
   /* Canis Major: small + high, far from Gargantua to avoid lens stretch.
      Size kept comparable to Orion / Virgo. */
   var boxes=portrait
-    ?{orion:[W*.04,top,W*.40,top+ah*.34],virgo:[W*.30,top+ah*.72,W*.96,bot-34],canis:[W*.58,top+ah*.12,W*.96,top+ah*.42]}
-    :{orion:[W*.05,top,W*.32,bot-ah*.10],virgo:[W*.68,top+ah*.08,W*.97,bot-ah*.08],canis:[W*.38,top+ah*.12,W*.62,top+ah*.48]};
+    ?{canis:[W*.04,top+ah*.20,W*.30,top+ah*.50],virgo:[W*.48,top+ah*.72,W*.76,bot-34],orion:[W*.38,top-ah*.02,W*.70,top+ah*.34]}
+    :{canis:[W*.05,top+ah*.17,W*.27,top+ah*.45],virgo:[W*.68,top+ah*.08,W*.97,bot-ah*.08],orion:[W*.39,top+ah*.05,W*.67,top+ah*.43]};
   CONS.forEach(function(c){
     var b=boxes[c.id],bw=b[2]-b[0],bh=b[3]-b[1],sc=Math.min(bw/c.bw,bh/c.bh);
     var x0=b[0]+(bw-c.bw*sc)/2,y0=b[1]+(bh-c.bh*sc)/2;
