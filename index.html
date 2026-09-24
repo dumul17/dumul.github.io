@@ -570,9 +570,15 @@ function drawAudioVisualizer(now,R){
     g.restore();
   }catch(err){}
 }
+/* Hook filled by the music-player IIFE — stops HUD spectrum RAF + UI state
+   the instant a star SFX takes over, so the two systems never fight. */
+var musicForceStop=null;
 function pauseMusicForSfx(){
   safePause(AMB);
   safePause(MUSIC_COLLAP);
+  if(typeof musicForceStop==='function'){
+    try{musicForceStop();}catch(e){}
+  }
 }
 function playSfx(a){
   /* Star SFX no longer warms, loads, or auto-resumes constellation music. */
@@ -580,8 +586,10 @@ function playSfx(a){
     if(a.paused){
       pauseMusicForSfx();
       setAVColor(a,false);
-      audioVizInit(a);
       safePlay(a);
+      /* Defer analyser wiring off the click frame — avoids a hitch when the
+         music HUD was just torn down and a supernova burst is spawning. */
+      requestAnimationFrame(function(){if(activeSfx===a)audioVizInit(a);});
     }else{
       safePause(a);
       audioVizOff();
@@ -595,7 +603,6 @@ function playSfx(a){
   }
   activeSfx=a;
   setAVColor(a,false);
-  audioVizInit(a);
   a.onended=null;
   a.onended=function(){
     if(activeSfx===a){
@@ -606,6 +613,7 @@ function playSfx(a){
     }
   };
   safePlay(a);
+  requestAnimationFrame(function(){if(activeSfx===a)audioVizInit(a);});
 }
 
 var BH={x:0,y:0,hx:0,hy:0,R:26,Rr:0,h:0,sprite:null,S:0};
@@ -1290,7 +1298,9 @@ function startSwallow(href){
   fadeTo(AMB,0,900);
   GARG.currentTime=0;GARG.volume=0;fadeTo(GARG,.55,1800);
   var pf=document.createElement('link');pf.rel='prefetch';pf.href=href;document.head.appendChild(pf);
-  var els=[].slice.call(document.querySelectorAll('#title,#header .sub,footer nav a,footer .quote,.portal,.cap'));
+  /* Include music toggle/HUD + side chrome so YT/IG aren't the only icons
+     that fly into Gargantua — previously #music-toggle was left out. */
+  var els=[].slice.call(document.querySelectorAll('#title,#header .sub,footer nav a,footer .quote,.portal,.cap,#music-toggle,#music-player,#owl-source,#bh-clock'));
   var maxD=Math.sqrt(W*W+H*H)*.6;
   els.forEach(function(el){
     var r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
@@ -2111,6 +2121,15 @@ var SN_COOLDOWN={};
     rowSpecs.forEach(function(bars){bars.forEach(function(b){b.style.height='3px';});});
     miniBars.forEach(function(b){b.style.height='4px';});
   }
+  /* Called from playSfx when a star takes over — kills spectrum RAF and
+     clears playing UI without waiting for the audio 'pause' event. */
+  musicForceStop=function(){
+    stopSpec();
+    toggle.classList.remove('playing-closed');
+    rows.forEach(function(row){row.classList.remove('playing');});
+    playBtn.setAttribute('aria-label','Play music');
+    playBtn.innerHTML='<span class="mp-play-icon" aria-hidden="true">▶</span><span class="mp-play-label">Play</span>';
+  };
   function open(){
     panel.classList.add('open');panel.setAttribute('aria-hidden','false');toggle.setAttribute('aria-expanded','true');
     sync();
