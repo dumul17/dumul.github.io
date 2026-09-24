@@ -3,21 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Dumul's Constellation — V38</title>
+<title>Dumul's Observatory — V38</title>
 <meta name="description" content="Dumul's little corner of the internet: a modder and music composer. Original soundtracks, gameplay, mods, and the music project DUMUL.">
 <link rel="canonical" href="https://dumul17.github.io/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23060b11'/%3E%3Cpath d='M32 8l6 18 18 6-18 6-6 18-6-18-18-6 18-6z' fill='%236ee5ff'/%3E%3C/svg%3E">
 <meta name="theme-color" content="#060b11">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Dumul's Constellation">
-<meta property="og:title" content="Dumul's Constellation">
+<meta property="og:site_name" content="Dumul's Observatory">
+<meta property="og:title" content="Dumul's Observatory">
 <meta property="og:description" content="A modder and music composer's little universe: original soundtracks, gameplay, mods, and the music project DUMUL.">
 <meta property="og:url" content="https://dumul17.github.io/">
 <meta property="og:image" content="https://dumul17.github.io/og-constellation.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Dumul's Constellation">
+<meta name="twitter:title" content="Dumul's Observatory">
 <meta name="twitter:description" content="A modder and music composer's little universe: original soundtracks, gameplay, mods, and the music project DUMUL.">
 <meta name="twitter:image" content="https://dumul17.github.io/og-constellation.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -142,7 +142,7 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 <div id="boot-screen" aria-hidden="false">
   <div id="boot-matrix" aria-hidden="true"></div>
   <div id="boot-core">
-    <div id="boot-title">DUMUL//CONSTELLATION</div>
+    <div id="boot-title">DUMUL//OBSERVATORY</div>
     <div id="boot-status">[ OBSERVER ]           <span class="ok">DETECTED</span>
 [ AUDIO CHANNEL ]      CONNECTING
 [ STAR MAP ]           SYNCHRONIZING
@@ -156,7 +156,7 @@ body.konami #sky{animation:greenGlitch .55s steps(2,end) 3}
 <canvas id="sky" aria-hidden="true"></canvas>
 <div class="scan" aria-hidden="true"></div>
 <header id="header">
-  <h1 id="title"><span class="kicker">Dumul's</span><span class="big">Constellation</span></h1>
+  <h1 id="title"><span class="kicker">Dumul's</span><span class="big">Observatory</span></h1>
   <p class="sub">modder &amp; music composer</p>
 </header>
 <span class="cap" id="cap-orion" aria-hidden="true">Orion</span>
@@ -2061,7 +2061,7 @@ srFx.addEventListener('click',function(){if(!SW)triggerSupernova('sirius');});
 /* ---------- easter eggs ---------- */
 function triggerKonami(){
   document.body.classList.add('konami');haptic(18);
-  showSecret('SYSTEM OVERRIDE · DUMUL//CONSTELLATION',1400);
+  showSecret('SYSTEM OVERRIDE · DUMUL//OBSERVATORY',1400);
   setTimeout(function(){document.body.classList.remove('konami');},1650);
 }
 window.addEventListener('keydown',function(e){
