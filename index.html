@@ -231,7 +231,7 @@ var SW=null,swP=0;
 var AMB=mkAudio('constellation.opus',.5,true);
 var GARG=mkAudio('collapsars.opus',0,true);
 var MUSIC_COLLAP=mkAudio('collapsars.opus',.5,true);
-var SFX={rigel:mkAudio('rigel.opus',.85,false),spica:mkAudio('spica.opus',.85,false),betel:mkAudio('betelgeuse.opus',.85,false),sirius:mkAudio('sirius.opus',.85,false)};
+var SFX={rigel:mkAudio('rigel.opus',.85,false),spica:mkAudio('spica.opus',.85,false),betel:mkAudio('betelgeuse.opus',.85,false),sirius:mkAudio('sirius.opus',.85,false),pleione:mkAudio('pleione.opus',.85,false)};
 function mkAudio(name,vol,loop){var a=new Audio(encodeURIComponent(name));a.preload='none';a.loop=!!loop;a.volume=vol;return a;}
 function safePlay(a){if(!a)return false;try{var p=a.play();if(p&&p.catch)p.catch(function(){});return true;}catch(e){return false;}}
 function safePause(a){if(!a)return;try{a.pause();}catch(e){}}
@@ -424,6 +424,7 @@ function avColorForAudio(a){
     if(a===SFX.spica)return [235,92,255];
     if(a===SFX.betel)return [255,72,64];
     if(a===SFX.sirius)return [180,220,255];
+    if(a===SFX.pleione)return [145,170,255];
   }
   return [155,215,255];
 }
@@ -640,8 +641,27 @@ var TRIGGERS={
  betel:{id:'betel',cons:'orion',star:'betel',rgb:'255,72,64'},
  rigel:{id:'rigel',cons:'orion',star:'rigel',rgb:'74,165,255'},
  spica:{id:'spica',cons:'virgo',star:'spica',rgb:'235,92,255'},
- sirius:{id:'sirius',cons:'canis',star:'sirius',rgb:'180,220,255'}
+ sirius:{id:'sirius',cons:'canis',star:'sirius',rgb:'180,220,255'},
+ pleione:{id:'pleione',cons:'pleiades',star:'Pleione',rgb:'145,170,255'}
 };
+
+/* ---------- PLEIADES: 7 bright + 2 dim, no imaginary lines ----------
+   Source coordinates are normalized 0..1 from the uploaded reference.
+   Pleione is one of the seven bright stars and is the only interactive one. */
+var PLEIADES={
+  bright:[
+    {x:.245,y:.425,name:'Merope'},
+    {x:.416,y:.340,name:'Electra'},
+    {x:.539,y:.477,name:'Alcyone'},
+    {x:.731,y:.472,name:'Atlas'},
+    {x:.340,y:.608,name:'Maia'},
+    {x:.304,y:.665,name:'Taygeta'},
+    {x:.356,y:.723,name:'Pleione',interactive:true}
+  ],
+  dim:[{x:.730,y:.536},{x:.242,y:.957}],
+  x:0,y:0,scale:1,ready:false
+};
+
 /* ---------- V4: active constellation focus + low-cost slow twinkle ----------
    Only the constellation that owns the currently playing star gets full
    brightness and animated twinkle. Other constellations smoothly dim.
@@ -795,6 +815,18 @@ function layout(){
     });
     if(c.nebula){c.nebula.x=x0+(c.nebula.rx-c.minx)*sc;c.nebula.y=y0+(c.nebula.ry-c.miny)*sc;}
   });
+  /* Pleiades sits northwest (left + up) of Spica.  Keep the cluster compact so
+     it reads as a blue stellar group rather than a fourth large constellation. */
+  (function(){
+    var sp=cons('virgo').stars.spica;
+    var ps=Math.min(W,H)*(W<500?.22:.24);
+    var targetX=sp.x-Math.min(W<500?141:188,W*.28);
+    var targetY=sp.y-Math.min(H<700?78:105,H*.15);
+    PLEIADES.scale=ps;
+    PLEIADES.x=targetX-.356*ps;
+    PLEIADES.y=targetY-.723*ps;
+    PLEIADES.ready=true;
+  })();
   var clk=$('#bh-clock'),ft2=$('#footer').getBoundingClientRect();
   clk.style.transform='translate(calc(14px + env(safe-area-inset-left,0px)),'+Math.round(ft2.top-26)+'px)';
   var o=cons('orion'),v=cons('virgo'),cm=cons('canis');
@@ -1491,7 +1523,9 @@ function drawAsteroids(now){
 
 function drawTriggerVisuals(now){
   Object.keys(TRIGGERS).forEach(function(key){
-    var tr=TRIGGERS[key],c=cons(tr.cons),s=c.stars[tr.star];
+    var tr=TRIGGERS[key];
+    if(tr.cons==='pleiades')return;
+    var c=cons(tr.cons),s=c.stars[tr.star];
     if(!s||s._a<=0)return;
     var q=gravityPos(s.x+c.ox,s.y+c.oy),x=q[0],y=q[1],fade=(1-.85*q[2]);
     var selected=activeSfx===SFX[key];
@@ -1645,6 +1679,81 @@ function drawStars(c,age,now){
     }
   });
 }
+function drawPleiades(age,now){
+  if(!PLEIADES.ready)return;
+  var k2=W<500?.95:1.1;
+  var ox=mouse.x*1.4,oy=mouse.y*1.0;
+  var selected=activeSfx===SFX.pleione&&!SFX.pleione.paused&&!SFX.pleione.ended;
+  /* Sebelum SFX Pleione aktif, seluruh gugus dibuat redup. Begitu SFX aktif,
+     gugus kembali ke brightness normal dan Pleione memakai pulse language
+     yang sama persis dengan bintang trigger lain. */
+  var clusterFade=selected?1:.30;
+  function drawOne(star,dim){
+    var x=PLEIADES.x+star.x*PLEIADES.scale+ox;
+    var y=PLEIADES.y+star.y*PLEIADES.scale+oy;
+    var r=(dim?1.15:1.8)*k2;
+    var a=(dim?.48:.88)*clusterFade;
+    var rgbc=star.interactive?'145,170,255':(dim?'110,145,205':'190,218,255');
+    var pulse=star.interactive?(1+.10*Math.sin(now*.0032)):(1+.045*Math.sin(now*.0015+star.x*9));
+    r*=pulse;
+    var q=gravityPos(x,y);
+    if(!q||q[2]>=1)return;
+    x=q[0];y=q[1];a*=(1-.75*q[2]);r*=1-.45*q[2];
+    var gr=g.createRadialGradient(x,y,0,x,y,r*(dim?4.5:5.8));
+    gr.addColorStop(0,'rgba('+rgbc+','+(a*.82)+')');
+    gr.addColorStop(.28,'rgba('+rgbc+','+(a*.28)+')');
+    gr.addColorStop(1,'rgba('+rgbc+',0)');
+    g.fillStyle=gr;g.beginPath();g.arc(x,y,r*(dim?4.5:5.8),0,6.283);g.fill();
+    g.fillStyle='rgba(238,246,255,'+(a*.94)+')';g.beginPath();g.arc(x,y,Math.max(.7,r*.58),0,6.283);g.fill();
+    if(star.interactive){
+      var hotP=(hot==='pleione'),tr=TRIGGERS.pleione;
+      var phase=(now*.00135+(star.ph||0))%1;
+      var breathe=reduce?0.5:(.5+.5*Math.sin(now*.0025+(star.ph||0)));
+      var strength=(selected?1:.42)+(hotP?.42:0);
+      var fade=(1-.85*q[2])*clusterFade;
+      var base=2.5*r;
+      var pulseR=base+3.5+10*phase;
+      var outerR=base+9+12*phase;
+      var coreR=base*(.92+.10*breathe);
+      g.save();g.globalCompositeOperation='lighter';
+      /* Same breathing/pulse recipe as Betelgeuse, Rigel, Spica, Sirius. */
+      g.strokeStyle='rgba('+tr.rgb+','+(.20*strength*fade)+')';g.lineWidth=.8;g.beginPath();g.arc(x,y,coreR,0,6.283);g.stroke();
+      g.strokeStyle='rgba('+tr.rgb+','+((.56+.18*breathe)*strength*fade)+')';g.lineWidth=1.05+.35*breathe;g.beginPath();g.arc(x,y,base+4.5*breathe,0,6.283);g.stroke();
+      var pa=(1-phase)*(.56+.22*strength)*fade;
+      g.strokeStyle='rgba('+tr.rgb+','+pa+')';g.lineWidth=.95;g.beginPath();g.arc(x,y,pulseR,0,6.283);g.stroke();
+      var phase2=(phase+.42)%1,pa2=(1-phase2)*.34*strength*fade;
+      g.strokeStyle='rgba('+tr.rgb+','+pa2+')';g.lineWidth=.7;g.beginPath();g.arc(x,y,base+7+11*phase2,0,6.283);g.stroke();
+      if(selected){
+        var rg=g.createRadialGradient(x,y,0,x,y,outerR+4);
+        rg.addColorStop(0,'rgba('+tr.rgb+','+(.12*strength*fade)+')');
+        rg.addColorStop(.55,'rgba('+tr.rgb+','+(.045*strength*fade)+')');
+        rg.addColorStop(1,'rgba('+tr.rgb+',0)');
+        g.fillStyle=rg;g.beginPath();g.arc(x,y,outerR+4,0,6.283);g.fill();
+      }
+      g.strokeStyle='rgba('+tr.rgb+','+(.55*strength*fade)+')';g.lineWidth=.7;
+      g.beginPath();g.moveTo(x-base-4,y);g.lineTo(x-base+2,y);g.moveTo(x+base-2,y);g.lineTo(x+base+4,y);g.moveTo(x,y-base-4);g.lineTo(x,y-base+2);g.moveTo(x,y+base-2);g.lineTo(x,y+base+4);g.stroke();
+      g.restore();
+      if(age>3.5&&q[2]<.25){
+        g.font='500 10px "Space Grotesk",system-ui,sans-serif';
+        g.textAlign='left';g.fillStyle='rgba('+tr.rgb+','+(hotP?.95:(selected?.78:.42))+')';
+        g.fillText('Pleione',x+r*3.4+7,y+3);
+      }
+    }
+  }
+  PLEIADES.dim.forEach(function(st){drawOne(st,true);});
+  PLEIADES.bright.forEach(function(st){drawOne(st,false);});
+}
+function pleiadesHitAt(px,py){
+  if(!PLEIADES.ready)return null;
+  var ox=mouse.x*1.4,oy=mouse.y*1.0;
+  for(var i=0;i<PLEIADES.bright.length;i++){
+    var st=PLEIADES.bright[i];if(!st.interactive)continue;
+    var q=gravityPos(PLEIADES.x+st.x*PLEIADES.scale+ox,PLEIADES.y+st.y*PLEIADES.scale+oy);
+    if(!q||q[2]>=1)continue;
+    if(Math.hypot(px-q[0],py-q[1])<Math.max(14,PLEIADES.scale*.065))return st;
+  }
+  return null;
+}
 function telescopeScreenPos(){
   var q=lens(TELESCOPE.x,TELESCOPE.y);
   return q ? [q[0],q[1]] : [TELESCOPE.x,TELESCOPE.y];
@@ -1666,9 +1775,10 @@ function drawPulses(now,age){
   for(var i=PU.length-1;i>=0;i--){
     var p=PU[i],u=(now-p.t)/p.d;if(u>1){PU.splice(i,1);continue;}
     if(p.shock){
-      var sb=p.c.stars[p.snKey],tr=TRIGGERS[p.snKey];
+      var tr=TRIGGERS[p.snKey],sb=(tr&&tr.cons==='pleiades')?PLEIADES.bright.filter(function(z){return z.name===tr.star;})[0]:(p.c.stars&&p.c.stars[p.snKey]);
       if(!sb||!tr)continue;
-      var base=gravityPos(sb.x+p.c.ox,sb.y+p.c.oy);
+      var bx=tr.cons==='pleiades'?(PLEIADES.x+sb.x*PLEIADES.scale+mouse.x*1.4):(sb.x+p.c.ox),by=tr.cons==='pleiades'?(PLEIADES.y+sb.y*PLEIADES.scale+mouse.y*1.0):(sb.y+p.c.oy);
+      var base=gravityPos(bx,by);
       if(!base||base[2]>=1)continue;
       var sx=base[0]+Math.cos(p.ang)*p.sp*u*(1-.35*base[2]),sy=base[1]+Math.sin(p.ang)*p.sp*u*(1-.35*base[2]);
       var sa=(1-u)*.72*(1-.7*base[2]);
@@ -1756,6 +1866,7 @@ function frame(now){
     CONS.forEach(function(c){drawCons(c,age,now);});
     drawPulses(now,age);
     CONS.forEach(function(c){drawStars(c,age,now);});
+    drawPleiades(age,now);
     drawTriggerVisuals(now);
     drawSupernovaBursts(now);
     /* Isolate late-stage canvas effects so one mobile/WebView compatibility
@@ -1875,7 +1986,7 @@ var SN_COOLDOWN={};
 
 function triggerSupernova(key){
   if(SW)return;
-  var tr=TRIGGERS[key],s=tr&&cons(tr.cons).stars[tr.star];
+  var tr=TRIGGERS[key],c=tr&&tr.cons==='pleiades'?PLEIADES:(tr&&cons(tr.cons)),s=tr&&c&&(tr.cons==='pleiades'?PLEIADES.bright.filter(function(z){return z.name===tr.star;})[0]:c.stars[tr.star]);
   if(!tr||!s)return;
   playSfx(SFX[key]);haptic(key==='betel'?20:18);
   /* A burst is a one-shot visual event, not tied to play/pause. Rapid or
@@ -1886,7 +1997,7 @@ function triggerSupernova(key){
   var t0g=performance.now();
   if(SN_COOLDOWN[key]&&t0g-SN_COOLDOWN[key]<820)return;
   SN_COOLDOWN[key]=t0g;
-  var c=cons(tr.cons),flash=$('#sn-flash'),q=gravityPos(s.x+c.ox,s.y+c.oy);
+  var flash=$('#sn-flash'),sx=tr.cons==='pleiades'?(PLEIADES.x+s.x*PLEIADES.scale+mouse.x*1.4):(s.x+c.ox),sy=tr.cons==='pleiades'?(PLEIADES.y+s.y*PLEIADES.scale+mouse.y*1.0):(s.y+c.oy),q=gravityPos(sx,sy);
   if(!q||q[2]>=1)return;
   flash.style.setProperty('--sx',Math.round(q[0])+'px');
   flash.style.setProperty('--sy',Math.round(q[1])+'px');
@@ -1913,7 +2024,7 @@ function drawSupernovaBursts(now){
   for(var i=SN_BURSTS.length-1;i>=0;i--){
     var b=SN_BURSTS[i],u=(now-b.t)/b.d;
     if(u>1){SN_BURSTS.splice(i,1);continue;}
-    var tr=TRIGGERS[b.key],c=cons(tr.cons),s=c.stars[tr.star],q=gravityPos(s.x+c.ox,s.y+c.oy);
+    var tr=TRIGGERS[b.key],c=tr.cons==='pleiades'?PLEIADES:cons(tr.cons),s=tr.cons==='pleiades'?PLEIADES.bright.filter(function(z){return z.name===tr.star;})[0]:c.stars[tr.star],sx=tr.cons==='pleiades'?(PLEIADES.x+s.x*PLEIADES.scale+mouse.x*1.4):(s.x+c.ox),sy=tr.cons==='pleiades'?(PLEIADES.y+s.y*PLEIADES.scale+mouse.y*1.0):(s.y+c.oy),q=gravityPos(sx,sy);
     if(!q||q[2]>=1)continue;
     var fade=1-.85*q[2],easeOut=1-Math.pow(1-u,3),base=s.r*(2.5+9*easeOut);
     g.save();g.globalCompositeOperation='lighter';
@@ -1940,6 +2051,9 @@ if(!reduce)window.addEventListener('pointermove',function(e){
 function updateHover(px,py){
   if(drag.on)return;
   var hit=null,best=12;
+  var ph=pleiadesHitAt(px,py);
+  if(ph){hot='pleione';return;}
+  if(hot==='pleione')hot=null;
   CONS.forEach(function(c){
     c._hot=-1;
     Object.keys(c.stars).forEach(function(k){
@@ -1959,6 +2073,12 @@ function updateHover(px,py){
 document.addEventListener('pointerdown',function(e){
   if(SW||drag.on||e.target.closest('#betel-fx,#rigel-fx,#sirius-fx,#bh,.portal,.hit,#owl-source,#bh-clock,#music-toggle,#music-player'))return;
   var now=performance.now(),hit=null,best=18;
+  var ph=pleiadesHitAt(e.clientX,e.clientY);
+  if(ph){
+    tapFlash={until:now+420,cons:'pleiades'};
+    triggerSupernova('pleione');
+    return;
+  }
   CONS.forEach(function(c){
     Object.keys(c.stars).forEach(function(k){
       var s=c.stars[k],d=Math.hypot(e.clientX-(s.x+c.ox),e.clientY-(s.y+c.oy));
@@ -2004,6 +2124,7 @@ function bhGrabRadius(){
 }
 function constellationTargetAt(x,y){
   var found=false;
+  if(pleiadesHitAt(x,y))found=true;
   CONS.forEach(function(c){
     Object.keys(c.stars).forEach(function(k){
       var s=c.stars[k],q=lens(s.x+c.ox,s.y+c.oy);
