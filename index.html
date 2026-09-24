@@ -308,7 +308,7 @@ function audioVizInit(a){
       AV.prev=new Uint8Array(AV.an.frequencyBinCount);
       AV.an.connect(AV.ctx.destination);
     }
-    var key=SFX.rigel===a?'rigel':(SFX.spica===a?'spica':(SFX.betel===a?'betel':(SFX.sirius===a?'sirius':null)));
+    var key=SFX.rigel===a?'rigel':(SFX.spica===a?'spica':(SFX.betel===a?'betel':(SFX.sirius===a?'sirius':(SFX.pleione===a?'pleione':null))));
     if(!key)return false;
     if(!AV.sources[key]){
       try{
@@ -650,17 +650,21 @@ var TRIGGERS={
    Pleione is one of the seven bright stars and is the only interactive one. */
 var PLEIADES={
   bright:[
-    {x:.245,y:.425,name:'Merope'},
-    {x:.416,y:.340,name:'Electra'},
-    {x:.539,y:.477,name:'Alcyone'},
-    {x:.731,y:.472,name:'Atlas'},
-    {x:.340,y:.608,name:'Maia'},
-    {x:.304,y:.665,name:'Taygeta'},
-    {x:.356,y:.723,name:'Pleione',interactive:true}
+    {x:.245,y:.425,name:'Merope',r:1.8},
+    {x:.416,y:.340,name:'Electra',r:1.8},
+    {x:.539,y:.477,name:'Alcyone',r:1.9},
+    {x:.731,y:.472,name:'Atlas',r:1.85},
+    {x:.340,y:.608,name:'Maia',r:1.8},
+    {x:.304,y:.665,name:'Taygeta',r:1.75},
+    {x:.356,y:.723,name:'Pleione',interactive:true,r:1.9}
   ],
-  dim:[{x:.730,y:.536},{x:.242,y:.957}],
+  dim:[{x:.730,y:.536,r:1.15},{x:.242,y:.957,r:1.15}],
   x:0,y:0,scale:1,ready:false
 };
+PLEIADES.bright.forEach(function(st){st.ph=Math.random()*6.283;});
+PLEIADES.dim.forEach(function(st){st.ph=Math.random()*6.283;});
+/* Shared compact breath/pulse geometry — same size language as Orion belt portal rings (~8). */
+var TRIGGER_PULSE_BASE=5.6;
 
 /* ---------- V4: active constellation focus + low-cost slow twinkle ----------
    Only the constellation that owns the currently playing star gets full
@@ -1535,35 +1539,35 @@ function drawTriggerVisuals(now){
        drawStars(), but their extra animated rings are suspended temporarily. */
     if(potatoAudioFocus()&&!selected)return;
     var hovered=hot===key;
-    /* One shared pulse language for all three stars. Only the RGB color differs. */
+    /* One shared compact pulse language for all trigger stars (matches Orion belt portal scale). */
     var phase=(now*.00135+s.ph)%1;
     var breathe=reduce?0.5:(.5+.5*Math.sin(now*.0025+s.ph));
     var strength=((selected?1:.42)+(hovered?.42:0))*focus;
-    var base=s.r*2.5;
-    var pulseR=base+3.5+10*phase;
-    var outerR=base+9+12*phase;
+    var base=TRIGGER_PULSE_BASE;
+    var pulseR=base+2.2+6.5*phase;
+    var outerR=base+5.5+7.5*phase;
     var coreR=base*(.92+.10*breathe);
     g.save();g.globalCompositeOperation='lighter';
     /* stable halo */
     g.strokeStyle='rgba('+tr.rgb+','+(.20*strength*fade)+')';g.lineWidth=.8;g.beginPath();g.arc(x,y,coreR,0,6.283);g.stroke();
     /* bright breathing ring */
-    g.strokeStyle='rgba('+tr.rgb+','+((.56+.18*breathe)*strength*fade)+')';g.lineWidth=1.05+.35*breathe;g.beginPath();g.arc(x,y,base+4.5*breathe,0,6.283);g.stroke();
-    /* expanding Spica-style pulse */
+    g.strokeStyle='rgba('+tr.rgb+','+((.56+.18*breathe)*strength*fade)+')';g.lineWidth=1.05+.35*breathe;g.beginPath();g.arc(x,y,base+2.8*breathe,0,6.283);g.stroke();
+    /* expanding pulse */
     var pa=(1-phase)*(.56+.22*strength)*fade;
     g.strokeStyle='rgba('+tr.rgb+','+pa+')';g.lineWidth=.95;g.beginPath();g.arc(x,y,pulseR,0,6.283);g.stroke();
     /* second, softer outer wave */
     var phase2=(phase+.42)%1,pa2=(1-phase2)*.34*strength*fade;
-    g.strokeStyle='rgba('+tr.rgb+','+pa2+')';g.lineWidth=.7;g.beginPath();g.arc(x,y,base+7+11*phase2,0,6.283);g.stroke();
+    g.strokeStyle='rgba('+tr.rgb+','+pa2+')';g.lineWidth=.7;g.beginPath();g.arc(x,y,base+4.5+7*phase2,0,6.283);g.stroke();
     /* selected audio gives a gentle luminous fill, not a different animation */
     if(selected){
-      var rg=g.createRadialGradient(x,y,0,x,y,outerR+4);
+      var rg=g.createRadialGradient(x,y,0,x,y,outerR+3);
       rg.addColorStop(0,'rgba('+tr.rgb+','+(.12*strength*fade)+')');
       rg.addColorStop(.55,'rgba('+tr.rgb+','+(.045*strength*fade)+')');
       rg.addColorStop(1,'rgba('+tr.rgb+',0)');
-      g.fillStyle=rg;g.beginPath();g.arc(x,y,outerR+4,0,6.283);g.fill();
+      g.fillStyle=rg;g.beginPath();g.arc(x,y,outerR+3,0,6.283);g.fill();
     }
     g.strokeStyle='rgba('+tr.rgb+','+(.55*strength*fade)+')';g.lineWidth=.7;
-    g.beginPath();g.moveTo(x-base-4,y);g.lineTo(x-base+2,y);g.moveTo(x+base-2,y);g.lineTo(x+base+4,y);g.moveTo(x,y-base-4);g.lineTo(x,y-base+2);g.moveTo(x,y+base-2);g.lineTo(x,y+base+4);g.stroke();
+    g.beginPath();g.moveTo(x-base-3,y);g.lineTo(x-base+1.5,y);g.moveTo(x+base-1.5,y);g.lineTo(x+base+3,y);g.moveTo(x,y-base-3);g.lineTo(x,y-base+1.5);g.moveTo(x,y+base-1.5);g.lineTo(x,y+base+3);g.stroke();
     g.restore();
   });
 }
@@ -1691,10 +1695,10 @@ function drawPleiades(age,now){
   function drawOne(star,dim){
     var x=PLEIADES.x+star.x*PLEIADES.scale+ox;
     var y=PLEIADES.y+star.y*PLEIADES.scale+oy;
-    var r=(dim?1.15:1.8)*k2;
+    var r=((star.r)||(dim?1.15:1.8))*k2;
     var a=(dim?.48:.88)*clusterFade;
     var rgbc=star.interactive?'145,170,255':(dim?'110,145,205':'190,218,255');
-    var pulse=star.interactive?(1+.10*Math.sin(now*.0032)):(1+.045*Math.sin(now*.0015+star.x*9));
+    var pulse=star.interactive?1:(1+.045*Math.sin(now*.0015+star.x*9));
     r*=pulse;
     var q=gravityPos(x,y);
     if(!q||q[2]>=1)return;
@@ -1707,38 +1711,52 @@ function drawPleiades(age,now){
     g.fillStyle='rgba(238,246,255,'+(a*.94)+')';g.beginPath();g.arc(x,y,Math.max(.7,r*.58),0,6.283);g.fill();
     if(star.interactive){
       var hotP=(hot==='pleione'),tr=TRIGGERS.pleione;
-      /* Exact shared trigger geometry: same base radius, ring spacing,
-         breathing rate and pulse expansion used by Betelgeuse/Rigel/Spica/Sirius. */
+      /* Exact same compact pulse geometry as Betelgeuse/Rigel/Spica/Sirius (TRIGGER_PULSE_BASE). */
       var phase=(now*.00135+(star.ph||0))%1;
       var breathe=reduce?0.5:(.5+.5*Math.sin(now*.0025+(star.ph||0)));
       var strength=(selected?1:.42)+(hotP?.42:0);
       var fade=(1-.85*q[2])*clusterFade;
-      var base=2.5*r;
-      var pulseR=base+3.5+10*phase;
-      var outerR=base+9+12*phase;
+      var base=TRIGGER_PULSE_BASE;
+      var pulseR=base+2.2+6.5*phase;
+      var outerR=base+5.5+7.5*phase;
       var coreR=base*(.92+.10*breathe);
       g.save();g.globalCompositeOperation='lighter';
-      /* Same breathing/pulse recipe as Betelgeuse, Rigel, Spica, Sirius. */
       g.strokeStyle='rgba('+tr.rgb+','+(.20*strength*fade)+')';g.lineWidth=.8;g.beginPath();g.arc(x,y,coreR,0,6.283);g.stroke();
-      g.strokeStyle='rgba('+tr.rgb+','+((.56+.18*breathe)*strength*fade)+')';g.lineWidth=1.05+.35*breathe;g.beginPath();g.arc(x,y,base+4.5*breathe,0,6.283);g.stroke();
+      g.strokeStyle='rgba('+tr.rgb+','+((.56+.18*breathe)*strength*fade)+')';g.lineWidth=1.05+.35*breathe;g.beginPath();g.arc(x,y,base+2.8*breathe,0,6.283);g.stroke();
       var pa=(1-phase)*(.56+.22*strength)*fade;
       g.strokeStyle='rgba('+tr.rgb+','+pa+')';g.lineWidth=.95;g.beginPath();g.arc(x,y,pulseR,0,6.283);g.stroke();
       var phase2=(phase+.42)%1,pa2=(1-phase2)*.34*strength*fade;
-      g.strokeStyle='rgba('+tr.rgb+','+pa2+')';g.lineWidth=.7;g.beginPath();g.arc(x,y,base+7+11*phase2,0,6.283);g.stroke();
+      g.strokeStyle='rgba('+tr.rgb+','+pa2+')';g.lineWidth=.7;g.beginPath();g.arc(x,y,base+4.5+7*phase2,0,6.283);g.stroke();
       if(selected){
-        var rg=g.createRadialGradient(x,y,0,x,y,outerR+4);
+        var rg=g.createRadialGradient(x,y,0,x,y,outerR+3);
         rg.addColorStop(0,'rgba('+tr.rgb+','+(.12*strength*fade)+')');
         rg.addColorStop(.55,'rgba('+tr.rgb+','+(.045*strength*fade)+')');
         rg.addColorStop(1,'rgba('+tr.rgb+',0)');
-        g.fillStyle=rg;g.beginPath();g.arc(x,y,outerR+4,0,6.283);g.fill();
+        g.fillStyle=rg;g.beginPath();g.arc(x,y,outerR+3,0,6.283);g.fill();
       }
       g.strokeStyle='rgba('+tr.rgb+','+(.55*strength*fade)+')';g.lineWidth=.7;
-      g.beginPath();g.moveTo(x-base-4,y);g.lineTo(x-base+2,y);g.moveTo(x+base-2,y);g.lineTo(x+base+4,y);g.moveTo(x,y-base-4);g.lineTo(x,y-base+2);g.moveTo(x,y+base-2);g.lineTo(x,y+base+4);g.stroke();
+      g.beginPath();g.moveTo(x-base-3,y);g.lineTo(x-base+1.5,y);g.moveTo(x+base-1.5,y);g.lineTo(x+base+3,y);g.moveTo(x,y-base-3);g.lineTo(x,y-base+1.5);g.moveTo(x,y+base-1.5);g.lineTo(x,y+base+3);g.stroke();
       g.restore();
       if(age>3.5&&q[2]<.25){
         g.font='500 10px "Space Grotesk",system-ui,sans-serif';
         g.textAlign='left';g.fillStyle='rgba('+tr.rgb+','+(hotP?.95:(selected?.78:.42))+')';
-        g.fillText('Pleione',x+r*3.4+7,y+3);
+        var labelX=x+r*3.4+7,labelY=y+3;
+        g.fillText('Pleione',labelX,labelY);
+        if(selected){
+          var bars=7,gap=1.8,bw=1.35;
+          var gapFromText=8,labelW=g.measureText('Pleione').width;
+          var sx=labelX+labelW+gapFromText,sy=labelY-7;
+          g.save();g.globalCompositeOperation='lighter';
+          for(var bi=0;bi<bars;bi++){
+            var wave=.5+.5*Math.sin(now*.009+bi*1.17+(star.ph||0));
+            var center=1-Math.abs((bi-(bars-1)/2)/((bars-1)/2));
+            var bhh=2+7.2*wave*(.35+.65*center);
+            var ba=.38+.52*wave;
+            g.fillStyle='rgba('+tr.rgb+','+ba+')';
+            g.fillRect(sx+bi*(bw+gap),sy+6-bhh,bw,bhh);
+          }
+          g.restore();
+        }
       }
     }
   }
@@ -1787,7 +1805,7 @@ function drawPulses(now,age){
       g.fillStyle='rgba('+tr.rgb+','+sa+')';g.beginPath();g.arc(sx,sy,1.2+2.2*u,0,6.283);g.fill();
       if((p.i||0)%3===0){
         g.strokeStyle='rgba('+tr.rgb+','+(sa*.42)+')';g.lineWidth=.65;
-        g.beginPath();g.arc(base[0],base[1],sb.r*(2+7*u),0,6.283);g.stroke();
+        g.beginPath();g.arc(base[0],base[1],((sb.r)||1.9)*(2+7*u),0,6.283);g.stroke();
       }
       continue;
     }
@@ -2028,7 +2046,7 @@ function drawSupernovaBursts(now){
     if(u>1){SN_BURSTS.splice(i,1);continue;}
     var tr=TRIGGERS[b.key],c=tr.cons==='pleiades'?PLEIADES:cons(tr.cons),s=tr.cons==='pleiades'?PLEIADES.bright.filter(function(z){return z.name===tr.star;})[0]:c.stars[tr.star],sx=tr.cons==='pleiades'?(PLEIADES.x+s.x*PLEIADES.scale+mouse.x*1.4):(s.x+c.ox),sy=tr.cons==='pleiades'?(PLEIADES.y+s.y*PLEIADES.scale+mouse.y*1.0):(s.y+c.oy),q=gravityPos(sx,sy);
     if(!q||q[2]>=1)continue;
-    var fade=1-.85*q[2],easeOut=1-Math.pow(1-u,3),base=s.r*(2.5+9*easeOut);
+    var fade=1-.85*q[2],easeOut=1-Math.pow(1-u,3),sr=(s&&s.r)||1.9,base=sr*(2.5+9*easeOut);
     g.save();g.globalCompositeOperation='lighter';
     var rg=g.createRadialGradient(q[0],q[1],0,q[0],q[1],base*2.6);
     rg.addColorStop(0,'rgba(255,255,255,'+(.82*(1-u)*fade)+')');
