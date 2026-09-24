@@ -692,9 +692,18 @@ var TRIGGERS={
    brightness and animated twinkle. Other constellations smoothly dim.
    Twinkle targets are changed slowly (not every frame), avoiding per-frame
    random/twinkle work on phones. */
-var CF={active:null,current:[],target:[],tw:[],nextTw:0,lastNow:0};
-function cfInit(){for(var i=0;i<CONS.length;i++){CF.current[i]=1;CF.target[i]=1;CF.tw[i]=1;}}
+var CF={active:null,current:[],target:[],lastNow:0};
+function cfInit(){for(var i=0;i<CONS.length;i++){CF.current[i]=1;CF.target[i]=1;}}
 cfInit();
+/* V5 sweep state: one cheap moving scanner per constellation. It is not drawn;
+   it only decides which individual star gets a short twinkle when the scanner
+   crosses its position. */
+var SWEEP={active:null,t:0,last:0,dir:1,cycle:0};
+function initSweepFor(id){
+  if(SWEEP.active===id)return;
+  SWEEP.active=id;SWEEP.t=0;SWEEP.last=0;SWEEP.dir=Math.random()<.5?1:-1;SWEEP.cycle++;
+  for(var ci=0;ci<CONS.length;ci++)for(var sk in CONS[ci].stars){var ss=CONS[ci].stars[sk];ss._tw=0;ss._twHit=-1;}
+}
 function playingConstellationId(){
   if(typeof activeSfx==='undefined'||!activeSfx||activeSfx.paused||activeSfx.ended)return null;
   if(activeSfx===SFX.betel||activeSfx===SFX.rigel)return 'orion';
@@ -704,25 +713,40 @@ function playingConstellationId(){
 }
 function updateConstellationFocus(now){
   var playing=playingConstellationId();
-  /* Keep the last selected constellation focused after its audio ends.
-     This makes the visual state linger instead of instantly collapsing to no focus. */
+  /* Keep the last selected constellation focused after its audio ends. */
   if(playing)CF.active=playing;
   var aid=CF.active;
+  var dt=Math.min(50,Math.max(0,now-(CF.lastNow||now)));
   for(var i=0;i<CONS.length;i++){
     var on=aid&&CONS[i].id===aid;
     CF.target[i]=on?1:.24;
-    var dt=Math.min(50,Math.max(0,now-(CF.lastNow||now)));
     var k=1-Math.pow(.001,dt/420);
     CF.current[i]+=(CF.target[i]-CF.current[i])*k;
   }
-  if(!CF.lastNow||now>=CF.nextTw){
-    for(var j=0;j<CONS.length;j++)CF.tw[j]=(aid&&CONS[j].id===aid)?(.72+Math.random()*.56):1;
-    CF.nextTw=now+170+Math.random()*150;
+  if(aid)initSweepFor(aid);
+  if(aid&&!reduce){
+    var c=cons(aid);
+    var step=dt*.00020*(IS_POTATO?.72:1);
+    SWEEP.t+=step;
+    if(SWEEP.t>1){SWEEP.t=0;SWEEP.cycle++;}
+    var span=c.maxX-c.minX, h=c.maxY-c.minY;
+    /* Diagonal scanner. Projection is normalized to the constellation box. */
+    var dx=SWEEP.dir,dy=.55,den=Math.sqrt(dx*dx+dy*dy),nx=dx/den,ny=dy/den;
+    var diag=Math.sqrt(span*span+h*h),band=Math.max(8,diag*.045);
+    var hitPos=SWEEP.t*(span*Math.abs(nx)+h*Math.abs(ny)+diag*.08)-diag*.04;
+    Object.keys(c.stars).forEach(function(key){
+      var st=c.stars[key],px=(st.x-c.minX)*nx+(st.y-c.minY)*ny;
+      var near=Math.abs(px-hitPos)<band;
+      if(near&&st._twHit!==SWEEP.cycle){
+        st._twHit=SWEEP.cycle;
+        st._tw=1;
+      }
+      if(st._tw>0)st._tw=Math.max(0,st._tw-dt/520);
+    });
   }
   CF.lastNow=now;
 }
 function constellationFocus(c){var i=CONS.indexOf(c);return i<0?1:CF.current[i];}
-function constellationTwinkle(c){var i=CONS.indexOf(c);return i<0?1:CF.tw[i];}
 function cons(id){for(var i=0;i<CONS.length;i++)if(CONS[i].id===id)return CONS[i];}
 function clockText(){
   var now=new Date(),h=now.getUTCHours(),m=now.getUTCMinutes(),sec=now.getUTCSeconds();
@@ -1581,14 +1605,14 @@ function drawCons(c,age,now){
 function drawStars(c,age,now){
   var k2=W<500?.95:1.2;
   var audioFocus=potatoAudioFocus();
-  var focus=constellationFocus(c),slowTw=constellationTwinkle(c);
+  var focus=constellationFocus(c);
   Object.keys(c.stars).forEach(function(k){
     var s=c.stars[k],a=clamp((age-s.t0)/.5);s._a=a;if(a<=0)return;
     var triggerKey=(k==='betel'?'betel':(k==='rigel'?'rigel':(k==='spica'?'spica':(k==='sirius'?'sirius':null))));
     var tr=triggerKey?TRIGGERS[triggerKey]:null;
     var isPlaying=!!(tr&&activeSfx===SFX[triggerKey]&&!SFX[triggerKey].paused);
     var cheap=audioFocus&&!isPlaying;
-    var tw=cheap?1:(reduce?1:(1+s.twinkleDepth*(slowTw-1)*2.2)),q=gravityPos(s.x+c.ox,s.y+c.oy),x=q[0],y=q[1],kq=q[2],r=s.r*k2*(1-.6*q[2])*(.97+.06*tw);a*=(1-.85*kq)*focus*tw;
+    var tw=cheap?1:(reduce?1:(1+s._tw*(.32+1.9*s.twinkleDepth))),q=gravityPos(s.x+c.ox,s.y+c.oy),x=q[0],y=q[1],kq=q[2],r=s.r*k2*(1-.6*q[2])*(.97+.10*s._tw);a*=(1-.85*kq)*focus*(1+.42*s._tw);
     if(cheap){
       /* During potato audio-focus, keep the star visible but replace its
          animated halo with one tiny core draw. This removes a radial-gradient
