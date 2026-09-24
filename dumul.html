@@ -258,16 +258,19 @@ h1.display.dm-glitching::after{animation:dm-slice-b .65s steps(1,end)}
     }catch(e){ctx=null;an=null;SPEC=null;}
   }
   function analyse(now){
+    if(!an||!SPEC)return;
     an.getByteFrequencyData(SPEC);
-    var i,e=0,flux=0;
+    var i,e=0,flux=0,n=SPEC.length;
     /* beat = lonjakan energi mendadak di frekuensi rendah (kick/bass) */
-    for(i=1;i<=8;i++){var d=SPEC[i]-PREV[i];if(d>0)flux+=d;}
-    flux/=8*255;
+    var lim=Math.min(8,n-1);
+    for(i=1;i<=lim;i++){var d=SPEC[i]-PREV[i];if(d>0)flux+=d;}
+    flux/=Math.max(1,lim)*255;
     avgFlux+=(flux-avgFlux)*.06;
     if(flux>avgFlux*1.7+.02&&now-lastBeatT>170){lastBeatT=now;A.beatAt=now;}
     PREV.set(SPEC);
-    for(i=1;i<=120;i++)e+=SPEC[i];
-    e/=120*255;
+    var el=Math.min(120,n-1);
+    for(i=1;i<=el;i++)e+=SPEC[i];
+    e/=Math.max(1,el)*255;
     level+=(Math.max(0,Math.min(1,(e-.22)*2.4))-level)*.35;
   }
 
@@ -360,11 +363,14 @@ h1.display.dm-glitching::after{animation:dm-slice-b .65s steps(1,end)}
   }
 
   /* ---------- satu loop buat semuanya ---------- */
+  var anSkip=0;
   function loop(now){
     raf=0;
     var playing=!audio.paused&&!audio.ended;
-    if(an&&playing)analyse(now);
-    else level*=.9;
+    /* Analyser every other frame — spectrum motion is slower than 60fps and
+       this roughly halves FFT cost while the seek wave still paints every frame. */
+    if(an&&playing){anSkip^=1;if(!anSkip)analyse(now);}
+    else{anSkip=0;level*=.9;}
     mix+=playing?.08:-.06;
     mix=Math.max(0,Math.min(1,mix));
     A.level=level*mix;
@@ -381,20 +387,40 @@ h1.display.dm-glitching::after{animation:dm-slice-b .65s steps(1,end)}
     closeLyrics();
   }
   function toggle(r){
-    ensureGraph();
+    /* Pause path skips Web Audio graph setup — cheaper on every PP tap. */
     if(current===r&&!audio.paused){audio.pause();return;}
+    ensureGraph();
+    gargCancel();
+    try{GARG.pause();}catch(e){}
     if(current!==r){current=r;audio.src=srcOf(r);}
     safePlay();
   }
 
   var GARG=new Audio(encodeURIComponent('collapsars.opus'));GARG.loop=true;GARG.volume=.5;GARG.preload='none';
-  function gTry(){var p=GARG.play();if(p&&p.catch)p.catch(function(){});}
+  var gargTimer=0;
+  function gargCancel(){if(gargTimer){clearTimeout(gargTimer);gargTimer=0;}}
+  function gTry(){
+    /* Never bed ambient over an active album track. */
+    if(!audio.paused&&!audio.ended)return;
+    var p=GARG.play();if(p&&p.catch)p.catch(function(){});
+  }
+  /* Idle resume is intentionally slow so brief pause / seek / track-change
+     never thrash: pause track → start collapsars → pause again. */
+  function gargSchedule(){
+    gargCancel();
+    gargTimer=setTimeout(function(){
+      gargTimer=0;
+      if(!audio.paused&&!audio.ended)return;
+      gTry();
+    },1800);
+  }
   gTry();
   document.addEventListener('pointerdown',gTry,{once:true});
   document.addEventListener('keydown',gTry,{once:true});
 
   audio.addEventListener('play',function(){
-    GARG.pause();
+    gargCancel();
+    try{GARG.pause();}catch(e){}
     clear();
     if(current){current.classList.add('dm-playing');showLyrics(current);}
     showBar();setPP(true);
@@ -405,13 +431,16 @@ h1.display.dm-glitching::after{animation:dm-slice-b .65s steps(1,end)}
     setPP(false);
     if(!audio.ended)clear();
     uiStep();kick();
-    setTimeout(function(){if(audio.paused)gTry();},60);
+    /* Was 60ms — caused collapsars to fight the album player on every pause. */
+    gargSchedule();
   });
   audio.addEventListener('ended',function(){
     clear();setPP(false);
     var list=rows(),i=list.indexOf(current);
-    if(i>-1&&i<list.length-1){current=list[i+1];audio.src=srcOf(current);safePlay();}
-    else{uiStep();kick();}
+    if(i>-1&&i<list.length-1){
+      gargCancel();
+      current=list[i+1];audio.src=srcOf(current);safePlay();
+    }else{uiStep();kick();gargSchedule();}
   });
   audio.addEventListener('error',function(){
     clear();setPP(false);hideBar();
@@ -483,6 +512,46 @@ h1.display.dm-glitching::after{animation:dm-slice-b .65s steps(1,end)}
 #dm-notes li{font-size:14px;line-height:1.75;color:rgba(214,228,240,.75);margin-bottom:6px}
 .dm-tracklink{background:none;border:0;padding:0;margin:0;font:inherit;color:#6ee5ff;cursor:pointer;text-decoration:underline;text-underline-offset:2px;-webkit-tap-highlight-color:transparent}
 .dm-tracklink:hover,.dm-tracklink:focus-visible{color:#ff7ad9}
+#dm-top{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;max-width:min(92vw,640px);margin:8px auto 28px;
+  padding:14px 16px;
+  border:1px solid rgba(110,229,255,.18);
+  border-radius:8px;
+  background:rgba(110,229,255,.04);
+  color:rgba(214,228,240,.78);
+  font:600 11px/1 'Space Grotesk',system-ui,sans-serif;
+  letter-spacing:.2em;text-transform:uppercase;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+  transition:color .25s ease,border-color .25s ease,background .25s ease,box-shadow .25s ease;
+}
+#dm-top:hover,#dm-top:focus-visible{
+  color:#6ee5ff;border-color:rgba(110,229,255,.45);
+  background:rgba(110,229,255,.09);box-shadow:0 0 18px rgba(110,229,255,.08);
+  outline:none;
+}
+#dm-top span{font-size:13px;letter-spacing:0;line-height:1}
+#dm-top-fab{
+  position:fixed;right:14px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:28;
+  width:40px;height:40px;border-radius:10px;
+  border:1px solid rgba(110,229,255,.22);
+  background:rgba(6,14,20,.82);color:rgba(214,228,240,.75);
+  display:grid;place-items:center;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+  opacity:0;pointer-events:none;transform:translateY(8px);
+  transition:opacity .28s ease,transform .28s ease,color .2s,border-color .2s,background .2s,box-shadow .2s;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+}
+#dm-top-fab.dm-show{opacity:1;pointer-events:auto;transform:none}
+#dm-top-fab:hover,#dm-top-fab:focus-visible{
+  color:#6ee5ff;border-color:rgba(110,229,255,.5);
+  background:rgba(110,229,255,.1);box-shadow:0 0 14px rgba(110,229,255,.12);outline:none;
+}
+#dm-top-fab svg{width:16px;height:16px;display:block}
+body.dm-has-bar #dm-top-fab{bottom:calc(78px + env(safe-area-inset-bottom,0px))}
+@media (prefers-reduced-motion:reduce){
+  #dm-top,#dm-top-fab{transition-duration:.01s!important}
+}
 </style>
 <section id="dm-notes">
 <h2>Track Notes</h2>
@@ -497,6 +566,40 @@ h1.display.dm-glitching::after{animation:dm-slice-b .65s steps(1,end)}
 <li><button type="button" class="dm-tracklink" data-title="Nastenka">Nastenka</button>: painful acceptance</li>
 <li><button type="button" class="dm-tracklink" data-title="Larung">Larung</button>: release</li>
 </ul>
+<button type="button" id="dm-top" aria-label="Kembali ke atas halaman">
+  <span aria-hidden="true">↑</span> Back to top
+</button>
 </section>
+<button type="button" id="dm-top-fab" aria-label="Kembali ke atas" title="Back to top">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+</button>
+<script>
+(function(){
+  function toTop(){
+    try{
+      var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({top:0,behavior:reduce?'auto':'smooth'});
+    }catch(e){window.scrollTo(0,0);}
+  }
+  var btn=document.getElementById('dm-top');
+  var fab=document.getElementById('dm-top-fab');
+  if(btn)btn.addEventListener('click',toTop);
+  if(fab)fab.addEventListener('click',toTop);
+  if(!fab)return;
+  var ticking=false,shown=false;
+  function update(){
+    ticking=false;
+    var y=window.scrollY||document.documentElement.scrollTop||0;
+    var on=y>420;
+    if(on===shown)return;
+    shown=on;
+    fab.classList.toggle('dm-show',on);
+  }
+  window.addEventListener('scroll',function(){
+    if(!ticking){ticking=true;requestAnimationFrame(update);}
+  },{passive:true});
+  update();
+})();
+</script>
 </body>
 </html>
