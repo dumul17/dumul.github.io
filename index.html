@@ -1707,6 +1707,8 @@ function drawPleiades(age,now){
     g.fillStyle='rgba(238,246,255,'+(a*.94)+')';g.beginPath();g.arc(x,y,Math.max(.7,r*.58),0,6.283);g.fill();
     if(star.interactive){
       var hotP=(hot==='pleione'),tr=TRIGGERS.pleione;
+      /* Exact shared trigger geometry: same base radius, ring spacing,
+         breathing rate and pulse expansion used by Betelgeuse/Rigel/Spica/Sirius. */
       var phase=(now*.00135+(star.ph||0))%1;
       var breathe=reduce?0.5:(.5+.5*Math.sin(now*.0025+(star.ph||0)));
       var strength=(selected?1:.42)+(hotP?.42:0);
@@ -2386,7 +2388,7 @@ window.addEventListener('pageshow',function(e){
     var rtM;window.addEventListener('resize',function(){clearTimeout(rtM);rtM=setTimeout(function(){if(matrixAlive)resizeMatrix();},150);});
   }
 
-  var stars=[SFX.betel,SFX.rigel,SFX.spica,SFX.sirius],t0=performance.now(),done=false;
+  var stars=[SFX.betel,SFX.rigel,SFX.spica,SFX.sirius,SFX.pleione],t0=performance.now(),done=false;
   var minMs=IS_POTATO?7000:4200;
   var maxMs=IS_POTATO?12000:8000;
   stars.forEach(function(a){try{a.preload='auto';a.load();}catch(e){}});
