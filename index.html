@@ -661,8 +661,8 @@ var PLEIADES={
   dim:[{x:.730,y:.536,r:1.15},{x:.242,y:.957,r:1.15}],
   x:0,y:0,scale:1,ready:false
 };
-PLEIADES.bright.forEach(function(st){st.ph=Math.random()*6.283;});
-PLEIADES.dim.forEach(function(st){st.ph=Math.random()*6.283;});
+PLEIADES.bright.forEach(function(st){st.ph=Math.random()*6.283;st._tw=0;st._twHit=-1;});
+PLEIADES.dim.forEach(function(st){st.ph=Math.random()*6.283;st._tw=0;st._twHit=-1;});
 /* Shared compact breath/pulse geometry — same size language as Orion belt portal rings (~8). */
 var TRIGGER_PULSE_BASE=5.6;
 
@@ -670,14 +670,17 @@ var TRIGGER_PULSE_BASE=5.6;
    Only the constellation that owns the currently playing star gets full
    brightness and animated twinkle. Other constellations smoothly dim.
    Twinkle targets are changed slowly (not every frame), avoiding per-frame
-   random/twinkle work on phones. */
+   random/twinkle work on phones.
+   Pleiades is included: when Pleione plays, all CONS dim; when Pleione stops,
+   CONS return to full (Pleiades is not a persistent CONS focus target). */
 var CF={active:null,current:[],target:[],lastNow:0};
 function cfInit(){for(var i=0;i<CONS.length;i++){CF.current[i]=1;CF.target[i]=1;}}
 cfInit();
 
 /* ---------- V5: constellation sweep -> individual star twinkle ----------
    Logic-only scanner. It uses the CURRENT screen positions of the active
-   constellation, so it remains safe even on the very first render frame. */
+   constellation, so it remains safe even on the very first render frame.
+   Also drives the Pleiades cluster when Pleione SFX is active. */
 var SWEEP={active:null,t:0,cycle:0,dir:1,angle:0,ready:false};
 function resetSweep(id){
   SWEEP.active=id;SWEEP.t=0;SWEEP.cycle=0;SWEEP.dir=Math.random()<.5?1:-1;
@@ -685,43 +688,56 @@ function resetSweep(id){
   for(var ci=0;ci<CONS.length;ci++)for(var sk in CONS[ci].stars){
     CONS[ci].stars[sk]._tw=0;CONS[ci].stars[sk]._twHit=-1;
   }
+  PLEIADES.bright.forEach(function(st){st._tw=0;st._twHit=-1;});
+  PLEIADES.dim.forEach(function(st){st._tw=0;st._twHit=-1;});
 }
 function playingConstellationId(){
   if(typeof activeSfx==='undefined'||!activeSfx||activeSfx.paused||activeSfx.ended)return null;
   if(activeSfx===SFX.betel||activeSfx===SFX.rigel)return 'orion';
   if(activeSfx===SFX.spica)return 'virgo';
   if(activeSfx===SFX.sirius)return 'canis';
+  if(activeSfx===SFX.pleione)return 'pleiades';
   return null;
 }
 function updateConstellationFocus(now){
   var playing=playingConstellationId();
+  /* Pleiades is not a persistent CONS focus: when Pleione stops, clear so
+     every main constellation returns to full brightness. */
   if(playing)CF.active=playing;
+  else if(CF.active==='pleiades')CF.active=null;
   var aid=CF.active;
   var dt=Math.min(50,Math.max(0,now-(CF.lastNow||now)));
   for(var i=0;i<CONS.length;i++){
-    var on=aid&&CONS[i].id===aid;CF.target[i]=on?1:.24;
+    /* When aid is null (idle after Pleione) or matches this constellation → full.
+       When another constellation (incl. pleiades) is active → dim. */
+    var on=!aid||CONS[i].id===aid;
+    CF.target[i]=on?1:.24;
     var k=1-Math.pow(.001,dt/420);CF.current[i]+=(CF.target[i]-CF.current[i])*k;
   }
   if(aid){
     if(SWEEP.active!==aid)resetSweep(aid);
-    var c=cons(aid);
-    if(c){
+    if(aid==='pleiades'){
+      /* Sweep across the Pleiades cluster using live screen positions. */
+      if(!PLEIADES.ready){CF.lastNow=now;return;}
+      var ox=mouse.x*1.4,oy=mouse.y*1.0;
       var minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
-      Object.keys(c.stars).forEach(function(key){
-        var st=c.stars[key];
-        if(isFinite(st.x)&&isFinite(st.y)){
-          if(st.x<minX)minX=st.x;if(st.x>maxX)maxX=st.x;
-          if(st.y<minY)minY=st.y;if(st.y>maxY)maxY=st.y;
-        }
-      });
+      var pts=[];
+      function collect(st){
+        var sx=PLEIADES.x+st.x*PLEIADES.scale+ox,sy=PLEIADES.y+st.y*PLEIADES.scale+oy;
+        pts.push({st:st,x:sx,y:sy});
+        if(sx<minX)minX=sx;if(sx>maxX)maxX=sx;
+        if(sy<minY)minY=sy;if(sy>maxY)maxY=sy;
+      }
+      PLEIADES.bright.forEach(collect);
+      PLEIADES.dim.forEach(collect);
       if(isFinite(minX)&&isFinite(maxX)&&isFinite(minY)&&isFinite(maxY)){
         var cx=(minX+maxX)*.5,cy=(minY+maxY)*.5;
         var hw=Math.max(1,(maxX-minX)*.5),hh=Math.max(1,(maxY-minY)*.5);
         var angle=SWEEP.angle,dy=Math.sin(angle),dx=Math.cos(angle),nx=-dy,ny=dx;
         var extent=Math.abs(nx)*hw+Math.abs(ny)*hh;
-        var margin=Math.max(14,Math.sqrt(hw*hw+hh*hh)*.16);
+        var margin=Math.max(10,Math.sqrt(hw*hw+hh*hh)*.18);
         var travel=extent+margin*2;
-        SWEEP.t+=dt*(IS_POTATO?.000095:.000125);
+        SWEEP.t+=dt*(IS_POTATO?.00011:.00014);
         if(!SWEEP.ready){SWEEP.t=0;SWEEP.ready=true;}
         if(SWEEP.t>=1){
           SWEEP.t=0;SWEEP.cycle++;SWEEP.dir=SWEEP.dir<0?1:-1;
@@ -729,14 +745,49 @@ function updateConstellationFocus(now){
           angle=SWEEP.angle;dy=Math.sin(angle);dx=Math.cos(angle);nx=-dy;ny=dx;
         }
         var offset=-extent-margin+travel*SWEEP.t;
-        var hitBand=Math.max(4.5,Math.min(9,Math.sqrt(hw*hw+hh*hh)*.045));
-        Object.keys(c.stars).forEach(function(key){
-          var st=c.stars[key];if(!isFinite(st.x)||!isFinite(st.y))return;
-          var relx=st.x-cx,rely=st.y-cy;
+        var hitBand=Math.max(3.5,Math.min(8,Math.sqrt(hw*hw+hh*hh)*.06));
+        pts.forEach(function(p){
+          var relx=p.x-cx,rely=p.y-cy;
           var perpendicular=relx*nx+rely*ny;
-          if(Math.abs(perpendicular-offset)<=hitBand&&st._twHit!==SWEEP.cycle){st._twHit=SWEEP.cycle;st._tw=1;}
-          if(st._tw>0)st._tw=Math.max(0,st._tw-dt/520);
+          if(Math.abs(perpendicular-offset)<=hitBand&&p.st._twHit!==SWEEP.cycle){p.st._twHit=SWEEP.cycle;p.st._tw=1;}
+          if(p.st._tw>0)p.st._tw=Math.max(0,p.st._tw-dt/520);
         });
+      }
+    }else{
+      var c=cons(aid);
+      if(c){
+        var minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+        Object.keys(c.stars).forEach(function(key){
+          var st=c.stars[key];
+          if(isFinite(st.x)&&isFinite(st.y)){
+            if(st.x<minX)minX=st.x;if(st.x>maxX)maxX=st.x;
+            if(st.y<minY)minY=st.y;if(st.y>maxY)maxY=st.y;
+          }
+        });
+        if(isFinite(minX)&&isFinite(maxX)&&isFinite(minY)&&isFinite(maxY)){
+          var cx=(minX+maxX)*.5,cy=(minY+maxY)*.5;
+          var hw=Math.max(1,(maxX-minX)*.5),hh=Math.max(1,(maxY-minY)*.5);
+          var angle=SWEEP.angle,dy=Math.sin(angle),dx=Math.cos(angle),nx=-dy,ny=dx;
+          var extent=Math.abs(nx)*hw+Math.abs(ny)*hh;
+          var margin=Math.max(14,Math.sqrt(hw*hw+hh*hh)*.16);
+          var travel=extent+margin*2;
+          SWEEP.t+=dt*(IS_POTATO?.000095:.000125);
+          if(!SWEEP.ready){SWEEP.t=0;SWEEP.ready=true;}
+          if(SWEEP.t>=1){
+            SWEEP.t=0;SWEEP.cycle++;SWEEP.dir=SWEEP.dir<0?1:-1;
+            SWEEP.angle=(SWEEP.dir<0?-1:1)*(.30+Math.random()*.34);
+            angle=SWEEP.angle;dy=Math.sin(angle);dx=Math.cos(angle);nx=-dy;ny=dx;
+          }
+          var offset=-extent-margin+travel*SWEEP.t;
+          var hitBand=Math.max(4.5,Math.min(9,Math.sqrt(hw*hw+hh*hh)*.045));
+          Object.keys(c.stars).forEach(function(key){
+            var st=c.stars[key];if(!isFinite(st.x)||!isFinite(st.y))return;
+            var relx=st.x-cx,rely=st.y-cy;
+            var perpendicular=relx*nx+rely*ny;
+            if(Math.abs(perpendicular-offset)<=hitBand&&st._twHit!==SWEEP.cycle){st._twHit=SWEEP.cycle;st._tw=1;}
+            if(st._tw>0)st._tw=Math.max(0,st._tw-dt/520);
+          });
+        }
       }
     }
   }
@@ -1695,18 +1746,20 @@ function drawPleiades(age,now){
   var k2=W<500?.95:1.1;
   var ox=mouse.x*1.4,oy=mouse.y*1.0;
   var selected=activeSfx===SFX.pleione&&!SFX.pleione.paused&&!SFX.pleione.ended;
-  /* Sebelum SFX Pleione aktif, seluruh gugus dibuat redup. Begitu SFX aktif,
-     gugus kembali ke brightness normal dan Pleione memakai pulse language
-     yang sama persis dengan bintang trigger lain. */
+  /* Full cluster when Pleione plays (or focus still on pleiades); otherwise dim.
+     Sweep-driven _tw gives the same sequential twinkle language as Orion/Virgo/Canis. */
   var clusterFade=selected?1:.30;
   function drawOne(star,dim){
     var x=PLEIADES.x+star.x*PLEIADES.scale+ox;
     var y=PLEIADES.y+star.y*PLEIADES.scale+oy;
-    var r=((star.r)||(dim?1.15:1.8))*k2;
-    var a=(dim?.48:.88)*clusterFade;
+    var twBoost=selected?(star._tw||0):0;
+    var r=((star.r)||(dim?1.15:1.8))*k2*(.97+.10*twBoost);
+    var a=(dim?.48:.88)*clusterFade*(1+.40*twBoost);
     var rgbc=star.interactive?'145,170,255':(dim?'110,145,205':'190,218,255');
+    /* Soft ambient shimmer when not in sweep; sweep _tw is the main flash. */
     var pulse=star.interactive?1:(1+.045*Math.sin(now*.0015+star.x*9));
     r*=pulse;
+    if(selected&&!reduce)a*=(1+twBoost*(.30+1.4*.12));
     var q=gravityPos(x,y);
     if(!q||q[2]>=1)return;
     x=q[0];y=q[1];a*=(1-.75*q[2]);r*=1-.45*q[2];
