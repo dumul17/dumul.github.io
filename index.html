@@ -1318,7 +1318,15 @@ function startSwallow(href){
   });
   [].slice.call(document.querySelectorAll('.hit,#bh')).forEach(function(el){el.style.opacity=0;});
   setTimeout(function(){$('#veil').classList.add('on');},SW.dur-600);
-  setTimeout(function(){location.href=href;},SW.dur);
+  setTimeout(function(){
+    /* Hand off collapsars playback position so dumul.html can continue
+       instead of restarting the bed from 0 after the page load. */
+    try{
+      sessionStorage.setItem('dm_collapsars_t',String(GARG&&GARG.currentTime||0));
+      sessionStorage.setItem('dm_collapsars_from','swallow');
+    }catch(e){}
+    location.href=href;
+  },SW.dur);
 }
 
 /* ---------- gambar ---------- */
