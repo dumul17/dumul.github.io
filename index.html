@@ -1183,6 +1183,10 @@ function drawHole(now,age){
 }
 function startSwallow(href){
   if(SW)return;
+  /* Gargantua owns the collapsars track while the swallow sequence runs.
+     If the mini player is already playing the same file through its separate
+     Audio object, pause it first so collapsars.opus can never double-play. */
+  safePause(MUSIC_COLLAP);
   SW={t0:performance.now(),dur:3000};
   document.body.classList.add('sw');
   fadeTo(AMB,0,900);
@@ -1991,7 +1995,7 @@ function updateHover(px,py){
   else if(hot!=='bh'&&hot!=='spica'&&hot!=='rigel'&&hot!=='betel'&&hot!=='sirius')hot=null;
 }
 document.addEventListener('pointerdown',function(e){
-  if(SW||drag.on||e.target.closest('#betel-fx,#rigel-fx,#sirius-fx,#bh,.portal,.hit,#owl-source,#bh-clock'))return;
+  if(SW||drag.on||e.target.closest('#betel-fx,#rigel-fx,#sirius-fx,#bh,.portal,.hit,#owl-source,#bh-clock,#music-toggle,#music-player'))return;
   var now=performance.now(),hit=null,best=18;
   CONS.forEach(function(c){
     Object.keys(c.stars).forEach(function(k){
@@ -2053,7 +2057,7 @@ function beginBHDrag(e){
   if(reduce||SW||drag.on)return false;
   /* Explicit interactive star/portal layers always win over Gargantua's wide grab field.
      This is important when Rigel starts close to the black hole on the initial layout. */
-  if(e.target.closest && e.target.closest('#rigel-fx,#betel-fx,#sirius-fx,.hit,.portal,#owl-source,#bh-clock'))return false;
+  if(e.target.closest && e.target.closest('#rigel-fx,#betel-fx,#sirius-fx,.hit,.portal,#owl-source,#bh-clock,#music-toggle,#music-player'))return false;
   /* Asteroid clicks get first refusal too, so a rock near Gargantua cannot start a BH drag. */
   if(asteroidScreenAt(e.clientX,e.clientY)>=0)return false;
   /* Star interactions always win over Gargantua's large invisible field. */
