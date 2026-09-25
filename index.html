@@ -319,7 +319,21 @@ var W=0,H=0,DPR=1,START=performance.now(),renderRAF=0,pageHidden=false,hiddenAt=
 var mouse={x:0,y:0,tx:0,ty:0},glitchUntil=0,hot=null;
 var touchMode=('ontouchstart' in window)||navigator.maxTouchPoints>0;
 var drag={on:false,moved:false,pid:null,x0:0,y0:0,bx:0,by:0};
+/* Mobile sky-pan + rotate: swipe to slide, 2-finger twist ±180°, both spring back. */
+var skyPan={x:0,y:0};
+var skyRot=0;
+var skyDrag={on:false,moved:false,pid:null,x0:0,y0:0,px:0,py:0};
+var skyPtrs={};
+var skyRotDrag={on:false,a0:0,r0:0};
 var tapFlash={until:0,cons:null};
+var _skyT=[0,0];
+function skyXF(x,y){
+  /* Rotate constellation space around screen center (pan already in x/y via ox). */
+  if(skyRot*skyRot<1e-8){_skyT[0]=x;_skyT[1]=y;return _skyT;}
+  var cx=W*.5,cy=H*.5,dx=x-cx,dy=y-cy,c=Math.cos(skyRot),s=Math.sin(skyRot);
+  _skyT[0]=cx+dx*c-dy*s;_skyT[1]=cy+dx*s+dy*c;return _skyT;
+}
+function gSky(x,y){var t=skyXF(x,y);return gravityPos(t[0],t[1]);}
 var konamiSeq=[],konami=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight'];
 var utcClicks=0,utcReset=0;
 var SW=null,swP=0;
@@ -845,7 +859,7 @@ function updateConstellationFocus(now){
     if(aid==='pleiades'){
       /* Sweep across the Pleiades cluster using live screen positions. */
       if(!PLEIADES.ready){CF.lastNow=now;return;}
-      var ox=mouse.x*1.4,oy=mouse.y*1.0;
+      var ox=mouse.x*1.4+skyPan.x,oy=mouse.y*1.0+skyPan.y;
       var minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
       var pts=[];
       function collect(st){
@@ -1022,16 +1036,16 @@ function layout(){
   CAPS.bh.style.transform='translate('+Math.round(BH.x-CAPS.bh.offsetWidth/2+3)+'px,'+Math.round(BH.y+BH.R*1.7)+'px)';
   var rg=cons('orion').stars.rigel,rfx=$('#rigel-fx');
   rfx.style.width=rfx.style.height='52px';rfx.style.marginLeft=rfx.style.marginTop='-26px';
-  rfx.style.transform='translate('+Math.round(rg.x)+'px,'+Math.round(rg.y)+'px)';
+  rfx.style.transform='translate('+Math.round(rg.x+skyPan.x)+'px,'+Math.round(rg.y+skyPan.y)+'px)';
   var bt=cons('orion').stars.betel,btx=$('#betel-fx');
-  btx.style.transform='translate('+Math.round(bt.x)+'px,'+Math.round(bt.y)+'px)';
+  btx.style.transform='translate('+Math.round(bt.x+skyPan.x)+'px,'+Math.round(bt.y+skyPan.y)+'px)';
   var sr=cons('canis').stars.sirius,sfx=$('#sirius-fx');
   sfx.style.width=sfx.style.height='52px';sfx.style.marginLeft=sfx.style.marginTop='-26px';
-  sfx.style.transform='translate('+Math.round(sr.x)+'px,'+Math.round(sr.y)+'px)';
+  sfx.style.transform='translate('+Math.round(sr.x+skyPan.x)+'px,'+Math.round(sr.y+skyPan.y)+'px)';
   /* Dedicated DOM hit target for Pleione — same reliability as Rigel/Betel/Sirius. */
   var pfx=$('#pleione-fx');
   if(pfx&&PLEIADES.ready){
-    var ox=mouse.x*1.4,oy=mouse.y*1.0;
+    var ox=mouse.x*1.4+skyPan.x,oy=mouse.y*1.0+skyPan.y;
     var pl=PLEIADES.bright.filter(function(z){return z.interactive;})[0];
     if(pl){
       var px=PLEIADES.x+pl.x*PLEIADES.scale+ox,py=PLEIADES.y+pl.y*PLEIADES.scale+oy;
@@ -1052,8 +1066,10 @@ function layout(){
       p.lx=s.x+20;
       p.ly=s.y;
     }
+    /* Fixed screen anchors — panels stay put; only the connector line stretches. */
+    p.fx=p.lx;p.fy=p.ly;
     /* Hard cap so DUMUL/YouTube panels stay compact and never cover Sirius / Rigel / other triggers */
-    var mw=Math.min(W<600?100:128,Math.max(80,W-p.lx-16));
+    var mw=Math.min(W<600?100:128,Math.max(80,W-p.fx-16));
     p.el.style.maxWidth=mw+'px';
   });
   var bgOrientation=W<H?'portrait':'landscape';
@@ -1754,7 +1770,7 @@ function drawTriggerVisuals(now){
     if(tr.cons==='pleiades')return;
     var c=cons(tr.cons),s=c.stars[tr.star];
     if(!s||s._a<=0)return;
-    var q=gravityPos(s.x+c.ox,s.y+c.oy),x=q[0],y=q[1],fade=(1-.85*q[2]);
+    var q=gSky(s.x+c.ox,s.y+c.oy),x=q[0],y=q[1],fade=(1-.85*q[2]);
     var selected=activeSfx===SFX[key];
     var focus=constellationFocus(c);
     /* Potato audio-focus mode: let only the star producing the sound keep its
@@ -1799,46 +1815,54 @@ function drawCons(c,age,now){
   var focus=constellationFocus(c);
   var sway=(reduce||audioFocus)?0:1;
   var wildField=(drag.on&&drag.moved)?1:0;
-  var ox=Math.sin(now*.00031+c.phase)*3*sway+mouse.x*(7+wildField*32),oy=Math.cos(now*.00027+c.phase)*3*sway+mouse.y*(5+wildField*26);
+  var ox=Math.sin(now*.00031+c.phase)*3*sway+mouse.x*(7+wildField*32)+skyPan.x,oy=Math.cos(now*.00027+c.phase)*3*sway+mouse.y*(5+wildField*26)+skyPan.y;
   if(now<glitchUntil){ox+=(Math.random()-.5)*7;oy+=(Math.random()-.5)*4;}
   c.ox=ox;c.oy=oy;
   if(c.nebula){
     var na=clamp((age-c.delay-1.2)/1.5);
-    if(na>0){var q0=pull(c.nebula.x+ox,c.nebula.y+oy),nx=q0[0],ny=q0[1],nr=c.scale*1.5*(1-.7*q0[2]);na*=(1-q0[2]);
+    if(na>0){var nt=skyXF(c.nebula.x+ox,c.nebula.y+oy),q0=pull(nt[0],nt[1]),nx=q0[0],ny=q0[1],nr=c.scale*1.5*(1-.7*q0[2]);na*=(1-q0[2]);
       var gr=g.createRadialGradient(nx,ny,0,nx,ny,nr);
       gr.addColorStop(0,'rgba(255,122,217,'+(.34*na)+')');gr.addColorStop(.5,'rgba(110,229,255,'+(.12*na)+')');gr.addColorStop(1,'rgba(110,229,255,0)');
       g.fillStyle=gr;g.beginPath();g.arc(nx,ny,nr,0,6.283);g.fill();}
   }
   g.lineCap='round';
-  c.lines.forEach(function(l,i){
-    var p=clamp((age-c.delay-i*.28)/.8);if(p<=0)return;p=1-Math.pow(1-p,3);
+  /* Adaptive lens samples: few when far from BH; denser only near horizon.
+     One sample pass per line — glow (if any) reuses the same points. */
+  var lines=c.lines,nLines=lines.length;
+  for(var i=0;i<nLines;i++){
+    var l=lines[i];
+    var p=clamp((age-c.delay-i*.28)/.8);if(p<=0)continue;p=1-Math.pow(1-p,3);
     var a=c.stars[l[0]],b=c.stars[l[1]];
-    var lineHot=(c._hot===i||tapFlash.cons===c.id&&tapFlash.until>now);
-    /* Sample the segment through the lens field.  Interpolating only the two
-       endpoints caused giant straight-line spikes when one endpoint crossed
-       the event-horizon cutoff. */
-    var pts=[],visible=0;
-    var samples=audioFocus?8:14;
+    var lineHot=(c._hot===i||(tapFlash.cons===c.id&&tapFlash.until>now));
+    var mx=(a.x+b.x)*.5+ox,my=(a.y+b.y)*.5+oy;
+    var nearBH=Math.hypot(mx-BH.x,my-BH.y)<(BH.R*8);
+    var samples=audioFocus?4:(IS_POTATO?(nearBH?6:3):(nearBH||lineHot?9:5));
+    var xs=drawCons._xs||(drawCons._xs=new Float32Array(16));
+    var ys=drawCons._ys||(drawCons._ys=new Float32Array(16));
+    var alive=drawCons._al||(drawCons._al=new Uint8Array(16));
+    var visible=0,kk=1;
     for(var si=0;si<=samples;si++){
       var tt=si/samples*p;
-      var qq=gravityPos(a.x+(b.x-a.x)*tt+ox,a.y+(b.y-a.y)*tt+oy);
-      if(qq[2]>=1){pts.push(null);continue;}
-      pts.push([qq[0],qq[1],qq[2]]);visible++;
+      var qq=gSky(a.x+(b.x-a.x)*tt+ox,a.y+(b.y-a.y)*tt+oy);
+      if(qq[2]>=1){alive[si]=0;continue;}
+      alive[si]=1;xs[si]=qq[0];ys[si]=qq[1];visible++;
+      kk=Math.min(kk,1-.55*qq[2]);
     }
-    if(visible>1){
-      var kk=1;
-      pts.forEach(function(pt){if(pt)kk=Math.min(kk,1-.55*pt[2]);});
-      g.strokeStyle='rgba(110,229,255,'+((lineHot?.14:.07)*kk*focus)+')';g.lineWidth=lineHot?6:4;
-      g.beginPath();
-      var drawing=false;
-      pts.forEach(function(pt){if(!pt){drawing=false;return;}if(!drawing){g.moveTo(pt[0],pt[1]);drawing=true;}else g.lineTo(pt[0],pt[1]);});
-      g.stroke();
-      g.strokeStyle='rgba(150,212,255,'+((lineHot?.72:.42)+(reduce?0:.1*Math.sin(now*.0014+i)))*kk*focus+')';g.lineWidth=lineHot?1.8:1.1;
-      g.beginPath();drawing=false;
-      pts.forEach(function(pt){if(!pt){drawing=false;return;}if(!drawing){g.moveTo(pt[0],pt[1]);drawing=true;}else g.lineTo(pt[0],pt[1]);});
+    if(visible<2)continue;
+    var doGlow=!IS_POTATO&&!audioFocus&&(lineHot||nearBH);
+    var pass,drawing2;
+    for(pass=doGlow?0:1;pass<2;pass++){
+      if(pass===0){g.strokeStyle='rgba(110,229,255,'+((lineHot?.14:.07)*focus)+')';g.lineWidth=lineHot?6:4;}
+      else{g.strokeStyle='rgba(150,212,255,'+((lineHot?.72:.42)+(reduce?0:.1*Math.sin(now*.0014+i)))*focus+')';g.lineWidth=lineHot?1.8:1.1;}
+      g.globalAlpha=kk;g.beginPath();drawing2=false;
+      for(var sj=0;sj<=samples;sj++){
+        if(!alive[sj]){drawing2=false;continue;}
+        if(!drawing2){g.moveTo(xs[sj],ys[sj]);drawing2=true;}else g.lineTo(xs[sj],ys[sj]);
+      }
       g.stroke();
     }
-  });
+    g.globalAlpha=1;
+  }
 }
 function drawStars(c,age,now){
   var k2=W<500?.95:1.2;
@@ -1850,7 +1874,7 @@ function drawStars(c,age,now){
     var tr=triggerKey?TRIGGERS[triggerKey]:null;
     var isPlaying=!!(tr&&activeSfx===SFX[triggerKey]&&!SFX[triggerKey].paused);
     var cheap=audioFocus&&!isPlaying;
-    var tw=cheap?1:(reduce?1:(1+s._tw*(.30+1.8*s.twinkleDepth))),q=gravityPos(s.x+c.ox,s.y+c.oy),x=q[0],y=q[1],kq=q[2],r=s.r*k2*(1-.6*q[2])*(.97+.10*s._tw);a*=(1-.85*kq)*focus*(1+.40*s._tw);
+    var tw=cheap?1:(reduce?1:(1+s._tw*(.30+1.8*s.twinkleDepth))),q=gSky(s.x+c.ox,s.y+c.oy),x=q[0],y=q[1],kq=q[2],r=s.r*k2*(1-.6*q[2])*(.97+.10*s._tw);a*=(1-.85*kq)*focus*(1+.40*s._tw);
     if(cheap){
       /* During potato audio-focus, keep the star visible but replace its
          animated halo with one tiny core draw. This removes a radial-gradient
@@ -1909,7 +1933,7 @@ function drawStars(c,age,now){
 function drawPleiades(age,now){
   if(!PLEIADES.ready)return;
   var k2=W<500?.95:1.1;
-  var ox=mouse.x*1.4,oy=mouse.y*1.0;
+  var ox=mouse.x*1.4+skyPan.x,oy=mouse.y*1.0+skyPan.y;
   var selected=activeSfx===SFX.pleione&&!SFX.pleione.paused&&!SFX.pleione.ended;
   /* Full cluster when Pleione plays (or focus still on pleiades); otherwise dim.
      Sweep-driven _tw gives the same sequential twinkle language as Orion/Virgo/Canis. */
@@ -1925,7 +1949,7 @@ function drawPleiades(age,now){
     var pulse=star.interactive?1:(1+.045*Math.sin(now*.0015+star.x*9));
     r*=pulse;
     if(selected&&!reduce)a*=(1+twBoost*(.30+1.4*.12));
-    var q=gravityPos(x,y);
+    var q=gSky(x,y);
     if(!q||q[2]>=1)return;
     x=q[0];y=q[1];a*=(1-.75*q[2]);r*=1-.45*q[2];
     var gr=g.createRadialGradient(x,y,0,x,y,r*(dim?4.5:5.8));
@@ -1990,13 +2014,13 @@ function drawPleiades(age,now){
 }
 function pleiadesHitAt(px,py){
   if(!PLEIADES.ready)return null;
-  var ox=mouse.x*1.4,oy=mouse.y*1.0;
+  var ox=mouse.x*1.4+skyPan.x,oy=mouse.y*1.0+skyPan.y;
   /* Match the generous hit radius used by Orion/Virgo/Canis trigger stars
      so the first tap registers reliably on phones. */
   var hitR=Math.max(22,PLEIADES.scale*.11);
   for(var i=0;i<PLEIADES.bright.length;i++){
     var st=PLEIADES.bright[i];if(!st.interactive)continue;
-    var q=gravityPos(PLEIADES.x+st.x*PLEIADES.scale+ox,PLEIADES.y+st.y*PLEIADES.scale+oy);
+    var q=gSky(PLEIADES.x+st.x*PLEIADES.scale+ox,PLEIADES.y+st.y*PLEIADES.scale+oy);
     if(!q||q[2]>=1)continue;
     if(Math.hypot(px-q[0],py-q[1])<hitR)return st;
   }
@@ -2025,7 +2049,7 @@ function drawPulses(now,age){
     if(p.shock){
       var tr=TRIGGERS[p.snKey],sb=(tr&&tr.cons==='pleiades')?PLEIADES.bright.filter(function(z){return z.name===tr.star;})[0]:(p.c.stars&&p.c.stars[p.snKey]);
       if(!sb||!tr)continue;
-      var bx=tr.cons==='pleiades'?(PLEIADES.x+sb.x*PLEIADES.scale+mouse.x*1.4):(sb.x+p.c.ox),by=tr.cons==='pleiades'?(PLEIADES.y+sb.y*PLEIADES.scale+mouse.y*1.0):(sb.y+p.c.oy);
+      var bx=tr.cons==='pleiades'?(PLEIADES.x+sb.x*PLEIADES.scale+mouse.x*1.4+skyPan.x):(sb.x+p.c.ox),by=tr.cons==='pleiades'?(PLEIADES.y+sb.y*PLEIADES.scale+mouse.y*1.0+skyPan.y):(sb.y+p.c.oy);
       var base=gravityPos(bx,by);
       if(!base||base[2]>=1)continue;
       var sx=base[0]+Math.cos(p.ang)*p.sp*u*(1-.35*base[2]),sy=base[1]+Math.sin(p.ang)*p.sp*u*(1-.35*base[2]);
@@ -2038,16 +2062,18 @@ function drawPulses(now,age){
       continue;
     }
     var A=p.c.stars[p.a],B=p.c.stars[p.b],ox=p.c.ox,oy=p.c.oy;
-    function gp(t){return gravityPos(A.x+(B.x-A.x)*t+ox,A.y+(B.y-A.y)*t+oy);}
-    function px(t){return gp(t)[0];}function py(t){return gp(t)[1];}
     var t2=Math.max(0,u-.2),al=Math.sin(u*Math.PI);
-    var seg=[],nseg=10;
-    for(var si=0;si<=nseg;si++){var tt=t2+(u-t2)*si/nseg,qq=gp(tt);if(qq[2]<1)seg.push(qq);}
-    if(seg.length>1){
-      g.strokeStyle='rgba(200,245,255,'+(.95*al)+')';g.lineWidth=2;g.beginPath();
-      seg.forEach(function(qq,i){if(i===0)g.moveTo(qq[0],qq[1]);else g.lineTo(qq[0],qq[1]);});g.stroke();
+    var nseg=IS_POTATO?4:6,drawn=0,drawing=false;
+    g.strokeStyle='rgba(200,245,255,'+(.95*al)+')';g.lineWidth=2;g.beginPath();
+    for(var si=0;si<=nseg;si++){
+      var tt=t2+(u-t2)*si/nseg;
+      var qq=gSky(A.x+(B.x-A.x)*tt+ox,A.y+(B.y-A.y)*tt+oy);
+      if(qq[2]>=1){drawing=false;continue;}
+      if(!drawing){g.moveTo(qq[0],qq[1]);drawing=true;}else g.lineTo(qq[0],qq[1]);
+      drawn++;
     }
-    var qp=gp(u);
+    if(drawn>1)g.stroke();
+    var qp=gSky(A.x+(B.x-A.x)*u+ox,A.y+(B.y-A.y)*u+oy);
     if(qp[2]<1){g.fillStyle='rgba(235,250,255,'+al+')';g.beginPath();g.arc(qp[0],qp[1],2,0,6.283);g.fill();}
   }
 }
@@ -2056,24 +2082,25 @@ function drawPortals(age,now){
   PORTALS.forEach(function(p){
     var c=p.c,ox=c.ox,oy=c.oy;
     p.h+=((hot===p.id?1:0)-p.h)*.15;
+    /* Panel is screen-fixed (layout anchors p.fx/p.fy). Only the connector
+       line tracks the moving star. Hit target still follows the star. */
     if(!SW){
-      var lp=gravityPos(p.lx+ox,p.ly+oy);
-      p.el.style.transform='translate('+(lp[0]).toFixed(1)+'px,'+(lp[1]).toFixed(1)+'px)';
-      var hs=c.stars[p.hit],hp=gravityPos(hs.x+ox,hs.y+oy);
+      var fx=p.fx!=null?p.fx:p.lx,fy=p.fy!=null?p.fy:p.ly;
+      p.el.style.transform='translate('+fx.toFixed(1)+'px,'+fy.toFixed(1)+'px)';
+      var hs=c.stars[p.hit],hp=gSky(hs.x+ox,hs.y+oy);
       p.hitEl.style.transform='translate('+(hp[0]).toFixed(1)+'px,'+(hp[1]).toFixed(1)+'px)';
     }
     if(na<=0)return;
     if(!p.el.classList.contains('on'))p.el.classList.add('on');
-    /* Portal connector and pulse rings must use the exact same lens transform
-       as the constellation stars. Otherwise the rings lag behind when the
-       black hole bends the star field. */
-    var l0=gravityPos(p.sx+ox,p.sy+oy),l1=gravityPos(p.lx+ox-2,p.ly+oy);
-    if(l0&&l1&&l0[2]<1&&l1[2]<1){
-      g.setLineDash([3,5]);g.lineWidth=1;g.strokeStyle='rgba('+p.col+','+((.32+.45*p.h)*na*(1-.5*Math.max(l0[2],l1[2])))+')';
-      g.beginPath();g.moveTo(l0[0],l0[1]);g.lineTo(l1[0],l1[1]);g.stroke();g.setLineDash([]);
+    /* Connector: star end uses full lens+pan; panel end is fixed on screen. */
+    var fx=p.fx!=null?p.fx:p.lx,fy=p.fy!=null?p.fy:p.ly;
+    var l0=gSky(p.sx+ox,p.sy+oy);
+    if(l0&&l0[2]<1){
+      g.setLineDash([3,5]);g.lineWidth=1;g.strokeStyle='rgba('+p.col+','+((.32+.45*p.h)*na*(1-.5*l0[2]))+')';
+      g.beginPath();g.moveTo(l0[0],l0[1]);g.lineTo(fx-2,fy);g.stroke();g.setLineDash([]);
     }else g.setLineDash([]);
     p.stars.forEach(function(k){
-      var s=c.stars[k],lp=gravityPos(s.x+ox,s.y+oy);
+      var s=c.stars[k],lp=gSky(s.x+ox,s.y+oy);
       if(!lp||lp[2]>=1)return;
       var x=lp[0],y=lp[1],fade=1-.85*lp[2];
       /* Trigger stars get their shared pulse from drawTriggerVisuals(); the
@@ -2105,6 +2132,19 @@ function frame(now){
     if(mouse.px!=null&&!drag.on)updateHover(mouse.px,mouse.py);
     if(!drag.on&&(Math.abs(BH.x-BH.hx)>.05||Math.abs(BH.y-BH.hy)>.05)){
       BH.x+=(BH.hx-BH.x)*.065;BH.y+=(BH.hy-BH.y)*.065;
+    }
+    /* Sky pan + rot springback when fingers are up. */
+    if(!skyDrag.on&&!skyRotDrag.on){
+      if(skyPan.x*skyPan.x+skyPan.y*skyPan.y>0.25){
+        skyPan.x+=-skyPan.x*.065;skyPan.y+=-skyPan.y*.065;
+        if(skyPan.x*skyPan.x+skyPan.y*skyPan.y<0.25){skyPan.x=0;skyPan.y=0;}
+        syncSkyPanHits();
+      }
+      if(skyRot*skyRot>1e-6){
+        skyRot+=-skyRot*.065;
+        if(skyRot*skyRot<1e-6)skyRot=0;
+        syncSkyPanHits();
+      }
     }
     g.clearRect(0,0,W,H);
     if(bgCanvas)g.drawImage(bgCanvas,0,0,W,H);
@@ -2297,7 +2337,7 @@ function triggerSupernova(key){
   var t0g=performance.now();
   if(SN_COOLDOWN[key]&&t0g-SN_COOLDOWN[key]<820)return;
   SN_COOLDOWN[key]=t0g;
-  var flash=$('#sn-flash'),sx=tr.cons==='pleiades'?(PLEIADES.x+s.x*PLEIADES.scale+mouse.x*1.4):(s.x+c.ox),sy=tr.cons==='pleiades'?(PLEIADES.y+s.y*PLEIADES.scale+mouse.y*1.0):(s.y+c.oy),q=gravityPos(sx,sy);
+  var flash=$('#sn-flash'),sx=tr.cons==='pleiades'?(PLEIADES.x+s.x*PLEIADES.scale+mouse.x*1.4+skyPan.x):(s.x+c.ox),sy=tr.cons==='pleiades'?(PLEIADES.y+s.y*PLEIADES.scale+mouse.y*1.0+skyPan.y):(s.y+c.oy),q=gSky(sx,sy);
   if(!q||q[2]>=1)return;
   flash.style.setProperty('--sx',Math.round(q[0])+'px');
   flash.style.setProperty('--sy',Math.round(q[1])+'px');
@@ -2326,7 +2366,7 @@ function drawSupernovaBursts(now){
   for(var i=SN_BURSTS.length-1;i>=0;i--){
     var b=SN_BURSTS[i],u=(now-b.t)/b.d;
     if(u>1){SN_BURSTS.splice(i,1);continue;}
-    var tr=TRIGGERS[b.key],c=tr.cons==='pleiades'?PLEIADES:cons(tr.cons),s=tr.cons==='pleiades'?PLEIADES.bright.filter(function(z){return z.name===tr.star;})[0]:c.stars[tr.star],sx=tr.cons==='pleiades'?(PLEIADES.x+s.x*PLEIADES.scale+mouse.x*1.4):(s.x+c.ox),sy=tr.cons==='pleiades'?(PLEIADES.y+s.y*PLEIADES.scale+mouse.y*1.0):(s.y+c.oy),q=gravityPos(sx,sy);
+    var tr=TRIGGERS[b.key],c=tr.cons==='pleiades'?PLEIADES:cons(tr.cons),s=tr.cons==='pleiades'?PLEIADES.bright.filter(function(z){return z.name===tr.star;})[0]:c.stars[tr.star],sx=tr.cons==='pleiades'?(PLEIADES.x+s.x*PLEIADES.scale+mouse.x*1.4+skyPan.x):(s.x+c.ox),sy=tr.cons==='pleiades'?(PLEIADES.y+s.y*PLEIADES.scale+mouse.y*1.0+skyPan.y):(s.y+c.oy),q=gSky(sx,sy);
     if(!q||q[2]>=1)continue;
     var fade=1-.85*q[2],easeOut=1-Math.pow(1-u,3),sr=(s&&s.r)||1.9,base=sr*(2.5+9*easeOut);
     g.save();g.globalCompositeOperation='lighter';
@@ -2486,6 +2526,118 @@ document.addEventListener('pointerdown',function(e){
 document.addEventListener('pointermove',moveBHDrag,{passive:true});
 document.addEventListener('pointerup',endBHDrag,{passive:false});
 document.addEventListener('pointercancel',endBHDrag,{passive:false});
+
+/* ---------- mobile constellation pan + 2-finger rotate (±180°) ---------- */
+function skyPanLimits(){
+  return {x:Math.max(80,W*.38),y:Math.max(70,H*.32)};
+}
+function skyHitXY(x,y){
+  /* Base star pos + pan, then rot around screen center (matches gSky). */
+  var t=skyXF(x+skyPan.x,y+skyPan.y);
+  return t;
+}
+function syncSkyPanHits(){
+  try{
+    var o=cons('orion'),cm=cons('canis');
+    if(o&&o.stars){
+      var rg=o.stars.rigel,bt=o.stars.betel;
+      if(rg){var rfx=$('#rigel-fx'),p=skyHitXY(rg.x,rg.y);if(rfx)rfx.style.transform='translate('+Math.round(p[0])+'px,'+Math.round(p[1])+'px)';}
+      if(bt){var btx=$('#betel-fx'),p2=skyHitXY(bt.x,bt.y);if(btx)btx.style.transform='translate('+Math.round(p2[0])+'px,'+Math.round(p2[1])+'px)';}
+    }
+    if(cm&&cm.stars&&cm.stars.sirius){
+      var sfx=$('#sirius-fx'),p3=skyHitXY(cm.stars.sirius.x,cm.stars.sirius.y);
+      if(sfx)sfx.style.transform='translate('+Math.round(p3[0])+'px,'+Math.round(p3[1])+'px)';
+    }
+    if(PLEIADES.ready){
+      var pl=PLEIADES.bright.filter(function(z){return z.interactive;})[0];
+      var pfx=$('#pleione-fx');
+      if(pl&&pfx){
+        var px=PLEIADES.x+pl.x*PLEIADES.scale+mouse.x*1.4;
+        var py=PLEIADES.y+pl.y*PLEIADES.scale+mouse.y*1.0;
+        var p4=skyHitXY(px,py);
+        pfx.style.transform='translate('+Math.round(p4[0])+'px,'+Math.round(p4[1])+'px)';
+      }
+    }
+  }catch(err){}
+}
+function skyPtrList(){
+  var ids=Object.keys(skyPtrs),out=[];
+  for(var i=0;i<ids.length;i++)out.push(skyPtrs[ids[i]]);
+  return out;
+}
+function skyTwoAngle(){
+  var pts=skyPtrList();
+  if(pts.length<2)return null;
+  return Math.atan2(pts[1].y-pts[0].y,pts[1].x-pts[0].x);
+}
+function beginSkyPan(e){
+  if(!touchMode||(e.pointerType==='mouse'))return false;
+  if(reduce||SW||drag.on)return false;
+  if(e.target.closest&&e.target.closest('#rigel-fx,#betel-fx,#sirius-fx,#pleione-fx,.hit,.portal,#owl-source,#bh-clock,#bh,#music-toggle,#music-player,#title,#footer,#boot-screen'))return false;
+  if(asteroidScreenAt(e.clientX,e.clientY)>=0)return false;
+  if(constellationTargetAt(e.clientX,e.clientY))return false;
+  var dBH=Math.hypot(e.clientX-BH.x,e.clientY-BH.y);
+  if(dBH<=bhGrabRadius())return false;
+  skyPtrs[e.pointerId]={x:e.clientX,y:e.clientY};
+  var n=Object.keys(skyPtrs).length;
+  if(n>=2){
+    /* 2-finger: rotate mode, drop single-finger pan. */
+    if(skyDrag.on){skyDrag.on=false;try{cv.releasePointerCapture(skyDrag.pid);}catch(err){}}
+    var a=skyTwoAngle();
+    if(a!=null){skyRotDrag.on=true;skyRotDrag.a0=a;skyRotDrag.r0=skyRot;}
+    try{cv.setPointerCapture(e.pointerId);}catch(err){}
+    return true;
+  }
+  if(skyDrag.on)return false;
+  skyDrag.on=true;skyDrag.moved=false;skyDrag.pid=e.pointerId;
+  skyDrag.x0=e.clientX;skyDrag.y0=e.clientY;
+  skyDrag.px=skyPan.x;skyDrag.py=skyPan.y;
+  try{cv.setPointerCapture(e.pointerId);}catch(err){}
+  return true;
+}
+function moveSkyPan(e){
+  if(skyPtrs[e.pointerId]){skyPtrs[e.pointerId].x=e.clientX;skyPtrs[e.pointerId].y=e.clientY;}
+  if(skyRotDrag.on&&Object.keys(skyPtrs).length>=2){
+    var a=skyTwoAngle();
+    if(a==null)return;
+    var d=a-skyRotDrag.a0;
+    /* unwrap delta into (-π, π] */
+    while(d>Math.PI)d-=Math.PI*2;
+    while(d<-Math.PI)d+=Math.PI*2;
+    skyRot=Math.max(-Math.PI,Math.min(Math.PI,skyRotDrag.r0+d));
+    syncSkyPanHits();
+    return;
+  }
+  if(!skyDrag.on||e.pointerId!==skyDrag.pid)return;
+  var dx=e.clientX-skyDrag.x0,dy=e.clientY-skyDrag.y0;
+  if(Math.hypot(dx,dy)>8)skyDrag.moved=true;
+  if(!skyDrag.moved)return;
+  var lim=skyPanLimits();
+  skyPan.x=Math.max(-lim.x,Math.min(lim.x,skyDrag.px+dx));
+  skyPan.y=Math.max(-lim.y,Math.min(lim.y,skyDrag.py+dy));
+  syncSkyPanHits();
+}
+function endSkyPan(e){
+  if(skyPtrs[e.pointerId])delete skyPtrs[e.pointerId];
+  var n=Object.keys(skyPtrs).length;
+  if(n<2)skyRotDrag.on=false;
+  if(skyDrag.on&&e.pointerId===skyDrag.pid){
+    var was=skyDrag.moved;skyDrag.on=false;
+    try{cv.releasePointerCapture(e.pointerId);}catch(err){}
+    if(was)haptic(6);
+  }
+  try{cv.releasePointerCapture(e.pointerId);}catch(err){}
+  syncSkyPanHits();
+}
+document.addEventListener('pointerdown',function(e){
+  if(drag.on)return;
+  /* preventDefault only — never stopPropagation, so Konami swipe still sees the gesture. */
+  if(beginSkyPan(e))e.preventDefault();
+},{passive:false,capture:true});
+document.addEventListener('pointermove',moveSkyPan,{passive:true});
+document.addEventListener('pointerup',endSkyPan,{passive:true});
+document.addEventListener('pointercancel',endSkyPan,{passive:true});
+
 var rgFx=$('#rigel-fx');
 rgFx.addEventListener('mouseenter',function(){hot='rigel';});
 rgFx.addEventListener('mouseleave',function(){if(hot==='rigel')hot=null;});
@@ -2548,7 +2700,7 @@ window.addEventListener('keydown',function(e){
 var konamiSwipeStart=null;
 function konamiBlockedTarget(target){
   return !!(target&&target.closest&&target.closest(
-    '#rigel-fx,#betel-fx,#sirius-fx,.hit,.portal,#owl-source,#bh-clock,#bh,#music-toggle,#music-player'
+    '#rigel-fx,#betel-fx,#sirius-fx,#pleione-fx,.hit,.portal,#owl-source,#bh-clock,#bh,#music-toggle,#music-player,#boot-screen'
   ));
 }
 function konamiSwipeDirection(dx,dy){
