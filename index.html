@@ -600,14 +600,25 @@ function avBarCount(){
 
 function ensureAVProfile(){
   var N=avBarCount();
-  if(AVP.N===N&&AVP.pts)return N;
+  if(AVP.N===N&&AVP.pts&&AVP.fake)return N;
   AVP.N=N;
   AVP.pts=new Float32Array(N*3);
+  AVP.fake=new Float32Array(N*3);
   for(var j=0;j<N;j++){
     var ang=(j/N)*6.28318530718-Math.PI*.5;
-    AVP.pts[j*3]=Math.cos(ang);
-    AVP.pts[j*3+1]=Math.sin(ang);
+    var c=Math.cos(ang),si=Math.sin(ang);
+    AVP.pts[j*3]=c;
+    AVP.pts[j*3+1]=si;
+
+    /* Fake bars: precomputed directions + deterministic length/motion seeds.
+       No per-bar trig or random allocation in the render loop. */
+    var fa=ang+((j&1)?0.006:-0.006);
+    AVP.fake[j*3]=Math.cos(fa);
+    AVP.fake[j*3+1]=Math.sin(fa);
+    AVP.fake[j*3+2]=.22+(((j*37+17)%100)/100)*.34;
   }
+  AVP.fakeTick=-1;
+  AVP.fakeState=0;
   AVP.stamp=-1;
   return N;
 }
@@ -645,12 +656,18 @@ function drawAudioVisualizer(now,R){
     var lv=AV.level,beat=AV.beat;
     var inner=R*1.045;
 
-    /* Longer bars are deliberate: the old profile topped out too close to
-       the Gargantua edge, so the spectrum became hard to read from a distance.
-       Keep the renderer cheap, but give normal energy and especially transients
-       substantially more radial travel. */
-    var ampBase=R*(.075+.13*lv+.22*beat);
-    var ampSpec=R*(.22+.34*lv+.42*beat);
+    /* 50% of the original baseline visualizer travel. */
+    var ampBase=R*(.0375+.065*lv+.11*beat);
+    var ampSpec=R*(.11+.17*lv+.21*beat);
+
+    /* Fake-bar motion is stepped globally and precomputed.  It deliberately
+       does not read FFT/beat and costs only one state change per interval. */
+    var ft=((now/120)|0);
+    if(AVP.fakeTick!==ft){
+      AVP.fakeTick=ft;
+      AVP.fakeState=(ft*7+3)&3;
+    }
+    var fakeScale=1+(AVP.fakeState-1.5)*.12;
 
     /* One path = one Canvas stroke.  A single colour keeps compositing cheap. */
     g.save();
@@ -668,12 +685,20 @@ function drawAudioVisualizer(now,R){
       var rr=inner+ampBase+fv*ampSpec;
       /* Beat transient is intentionally large and remains visible even when
          the instantaneous FFT frame is a little soft. */
-      if(beat>.12)rr+=R*(.055+.12*beat);
+      if(beat>.12)rr+=R*(.0275+.06*beat);
       var x=pts[j*3]*inner;
       var y=pts[j*3+1]*inner;
       var x2=pts[j*3]*rr;
       var y2=pts[j*3+1]*rr;
       g.moveTo(x,y);g.lineTo(x2,y2);
+
+      /* One cheap fake bar between every pair: precomputed geometry,
+         half-length-ish, with a shared stepped motion state. */
+      var fp=j*3;
+      var frr=inner+(rr-inner)*AVP.fake[fp+2]*fakeScale*.5;
+      var fx=AVP.fake[fp]*inner,fy=AVP.fake[fp+1]*inner;
+      var fx2=AVP.fake[fp]*frr,fy2=AVP.fake[fp+1]*frr;
+      g.moveTo(fx,fy);g.lineTo(fx2,fy2);
     }
     g.stroke();
     g.restore();
