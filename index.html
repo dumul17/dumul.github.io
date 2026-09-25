@@ -350,9 +350,14 @@ function safePlay(a){
     /* First tap on a cold file often rejects until the buffer is ready.
        Kick load(), then retry on canplay so Pleione (and any slow SFX)
        starts on the same user gesture without needing a second click. */
-    if(a.readyState<2){
+    if(a.readyState<2&&!a._retrying){
+      /* Guard flag so a rapid double-tap on the same cold file (e.g. Pleione)
+         can't stack a second canplay/canplaythrough pair before the first
+         one has fired - that used to fire play() twice for one gesture. */
+      a._retrying=true;
       try{a.load();}catch(eLoad){}
       var retry=function(){
+        a._retrying=false;
         a.removeEventListener('canplay',retry);
         a.removeEventListener('canplaythrough',retry);
         if(a.paused||a.ended){
@@ -2209,6 +2214,7 @@ function startRenderLoop(){
   if(pageHidden||renderRAF||!bootDone)return;
   lastFrameOK=performance.now();
   renderRAF=requestAnimationFrame(frame);
+  if(window.__hub)window.__hub.ready=true;
 }
 /* Watchdog skipped while boot overlay is up. */
 setInterval(function(){
@@ -2431,11 +2437,16 @@ function updateHover(px,py){
   CONS.forEach(function(c){
     c._hot=-1;
     Object.keys(c.stars).forEach(function(k){
-      var s=c.stars[k],d=Math.hypot(px-(s.x+c.ox),py-(s.y+c.oy));
+      /* Project through gSky (skyRot + lens) so the hit test matches what's
+         actually on screen after a mobile 2-finger rotate, not the pre-rotation
+         world position. */
+      var s=c.stars[k],q=gSky(s.x+c.ox,s.y+c.oy),d=Math.hypot(px-q[0],py-q[1]);
       if(d<Math.max(10,s.r*3.5)&&d<best){best=d;hit={c:c,star:k};}
     });
     c.lines.forEach(function(l,i){
-      var a=c.stars[l[0]],b=c.stars[l[1]],ax=a.x+c.ox,ay=a.y+c.oy,bx=b.x+c.ox,by=b.y+c.oy;
+      var a=c.stars[l[0]],b=c.stars[l[1]];
+      var qa=gSky(a.x+c.ox,a.y+c.oy),qb=gSky(b.x+c.ox,b.y+c.oy);
+      var ax=qa[0],ay=qa[1],bx=qb[0],by=qb[1];
       var vx=bx-ax,vy=by-ay,den=vx*vx+vy*vy||1,t=Math.max(0,Math.min(1,((px-ax)*vx+(py-ay)*vy)/den));
       var d=Math.hypot(px-(ax+vx*t),py-(ay+vy*t));
       if(d<5&&d<best){best=d;hit={c:c,line:i};}
@@ -2455,7 +2466,9 @@ document.addEventListener('pointerdown',function(e){
   }
   CONS.forEach(function(c){
     Object.keys(c.stars).forEach(function(k){
-      var s=c.stars[k],d=Math.hypot(e.clientX-(s.x+c.ox),e.clientY-(s.y+c.oy));
+      /* Same gSky projection as drawing/hover, so a tap still lands on the
+         star after the sky has been rotated with a 2-finger twist. */
+      var s=c.stars[k],q=gSky(s.x+c.ox,s.y+c.oy),d=Math.hypot(e.clientX-q[0],e.clientY-q[1]);
       if(d<Math.max(13,s.r*4)&&d<best)hit={c:c,star:k},best=d;
     });
   });
@@ -2502,7 +2515,10 @@ function constellationTargetAt(x,y){
   if(pleiadesHitAt(x,y))found=true;
   CONS.forEach(function(c){
     Object.keys(c.stars).forEach(function(k){
-      var s=c.stars[k],q=lens(s.x+c.ox,s.y+c.oy);
+      /* skyXF first (mobile 2-finger rotate), then the gravity lens - same
+         order drawStars() uses via gSky - or this misses every star once
+         the sky has been rotated. */
+      var s=c.stars[k],t=skyXF(s.x+c.ox,s.y+c.oy),q=lens(t[0],t[1]);
       if(!q)return;
       var d=Math.hypot(x-q[0],y-q[1]);
       if(d<Math.max(14,s.r*4.5))found=true;
@@ -2565,9 +2581,12 @@ function skyPanLimits(){
   return {x:Math.max(80,W*.38),y:Math.max(70,H*.32)};
 }
 function skyHitXY(x,y){
-  /* Base star pos + pan, then rot around screen center (matches gSky). */
-  var t=skyXF(x+skyPan.x,y+skyPan.y);
-  return t;
+  /* Base star pos + pan, then through gSky - same rotation AND gravity-lens
+     bend the canvas actually draws with. skyXF alone (the old behavior) put
+     these buttons back at the right angle after a rotate but left them
+     un-bent near Gargantua, so a star lensed toward/away from the black hole
+     still had its invisible tap target sitting at the un-lensed spot. */
+  return gSky(x+skyPan.x,y+skyPan.y);
 }
 function syncSkyPanHits(){
   try{
@@ -2596,7 +2615,12 @@ function syncSkyPanHits(){
         pfx.style.transform='translate('+Math.round(p4[0])+'px,'+Math.round(p4[1])+'px)';
       }
     }
-  }catch(err){}
+  }catch(err){
+    /* Silently dropping this would leave the invisible rigel/betel/sirius/
+       aldebaran/pleione hit targets stuck at their pre-rotation position with
+       no trace - record it like the other render-path errors instead. */
+    if(window.__hub)window.__hub.renderError='syncSkyPanHits: '+(err&&err.message||err);
+  }
 }
 function skyPtrList(){
   var ids=Object.keys(skyPtrs),out=[];
@@ -3072,7 +3096,10 @@ window.addEventListener('pageshow',function(e){
 
 tickClock();setInterval(tickClock,1000);
 var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(layout,120);});
-window.__hub={ready:true};
+/* ready starts false: this object existing only means the script parsed,
+   not that boot finished and the render loop is actually running. Flipped
+   to true from startRenderLoop() once frames are really being produced. */
+window.__hub={ready:false};
 if(document.fonts&&document.fonts.addEventListener){document.fonts.addEventListener('loadingdone',function(){if(W)layout();});}
 function boot(){
   if(W)return;
