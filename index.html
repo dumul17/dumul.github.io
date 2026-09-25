@@ -243,14 +243,14 @@ body.konami #sky{animation:cyberGlitch .55s steps(2,end) 3}
     <div id="boot-signal">&gt; SIGNAL TRANSMITTED</div>
     <div id="boot-quote">Keep creating, even without the applause.</div>
     <div id="boot-choices" aria-hidden="true">
-      <div class="boot-choice">
-        <button type="button" id="boot-cap-blue" class="boot-cap blue" aria-label="Enter Observatory" title="Observatory"></button>
-        <span class="boot-cap-label">Blue</span>
-      </div>
-      <span class="boot-or">or</span>
-      <div class="boot-choice">
+      <div class="boot-choice" id="boot-choice-red">
         <button type="button" id="boot-cap-red" class="boot-cap red" aria-label="View Source Code" title="Source Code"></button>
         <span class="boot-cap-label">Red</span>
+      </div>
+      <span class="boot-or" id="boot-or">or</span>
+      <div class="boot-choice" id="boot-choice-blue">
+        <button type="button" id="boot-cap-blue" class="boot-cap blue" aria-label="Enter Observatory" title="Observatory"></button>
+        <span class="boot-cap-label">Blue</span>
       </div>
     </div>
   </div>
@@ -2691,10 +2691,9 @@ window.addEventListener('pageshow',function(e){
        Streams spawn already mid-fall so the first frame is a full rain field. */
     var cols=[],baseFont,dprM;
     var LAYERS=[
-      {depth:0.22,speedMul:0.28,alphaMul:0.22,fontScale:0.62,countMul:1.55},
-      {depth:0.48,speedMul:0.52,alphaMul:0.48,fontScale:0.82,countMul:1.15},
-      {depth:0.78,speedMul:0.88,alphaMul:0.82,fontScale:1.00,countMul:0.85},
-      {depth:1.00,speedMul:1.18,alphaMul:1.00,fontScale:1.12,countMul:0.55}
+      {depth:0.28,speedMul:0.32,alphaMul:0.28,fontScale:0.70,countMul:1.25},
+      {depth:0.58,speedMul:0.62,alphaMul:0.55,fontScale:0.90,countMul:0.95},
+      {depth:0.92,speedMul:1.05,alphaMul:0.95,fontScale:1.10,countMul:0.65}
     ];
     function makeStream(layer,w,h,midway){
       var fs=Math.max(8,Math.round(baseFont*layer.fontScale));
@@ -2850,6 +2849,15 @@ window.addEventListener('pageshow',function(e){
         window.open('https://github.com/dumul17/dumul17.github.io/blob/main/index.html','_blank','noopener');
       }catch(e){
         location.href='https://github.com/dumul17/dumul17.github.io/blob/main/index.html';
+      }
+      /* Red already used — drop Red + or, leave Blue centered. */
+      var redChoice=document.getElementById('boot-choice-red');
+      var orEl=document.getElementById('boot-or');
+      if(redChoice)redChoice.style.display='none';
+      if(orEl)orEl.style.display='none';
+      if(choicesEl){
+        choicesEl.style.justifyContent='center';
+        choicesEl.style.gap='0';
       }
     });
   }
