@@ -236,8 +236,71 @@ body.konami #sky{animation:cyberGlitch .55s steps(2,end) 3}
   .boot-cap-label,.boot-or{font-size:8px;letter-spacing:.12em}
 }
 
+
+/* ---------- mobile landscape: compact 4-zone observatory layout ---------- */
+@media (orientation: landscape) and (max-height: 520px) {
+  header {
+    padding-top: calc(4px + env(safe-area-inset-top, 0px)) !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  .kicker { font-size: 8px !important; letter-spacing: .3em !important; }
+  .big {
+    margin-top: 2px !important;
+    font-size: clamp(15px, 5vh, 22px) !important;
+  }
+  /* Sembunyikan subtitle agar kanvas bintang mendapat ruang vertikal maksimal */
+  .sub { display: none !important; }
+
+  /* Boot Screen compact landscape fix (agar tidak terpotong vertikal) */
+  #boot-core {
+    padding: 12px 16px 10px !important;
+  }
+  #boot-title {
+    font-size: 15px !important;
+    margin-bottom: 6px !important;
+  }
+  #boot-status {
+    font-size: 8.5px !important;
+    line-height: 1.4 !important;
+  }
+  #boot-bar { margin-top: 6px !important; height: 5px !important; }
+  #boot-pct { margin-top: 2px !important; font-size: 8.5px !important; }
+  #boot-signal { margin-top: 6px !important; font-size: 9px !important; }
+  #boot-quote { margin-top: 4px !important; font-size: 8px !important; }
+  #boot-choices { margin-top: 8px !important; gap: 10px !important; }
+  .boot-cap { width: 44px !important; height: 18px !important; }
+
+  /* Portal & HUD */
+  .portal { margin-top: -12px !important; }
+  .portal .lab { padding: 3px 6px !important; }
+  .portal b { font-size: 9px !important; }
+  .portal small { font-size: 7.5px !important; }
+  .portal .lab-open { font-size: 6px !important; }
+  #bh-clock { font-size: 7.2px !important; }
+  #bh-clock .clock-time { font-size: 9px !important; }
+  footer {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  footer nav a, #music-toggle {
+    width: 28px !important;
+    height: 28px !important;
+  }
+  #music-toggle {
+    right: 8px !important;
+    bottom: calc(6px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  #music-player {
+    bottom: 48px !important;
+    max-height: calc(100vh - 60px) !important;
+    overflow-y: auto !important;
+  }
+}
+
 </style>
-<meta name="gimmick-revision" content="v41.8: observatory polish — RA-Dec grid, target reticles, anamorphic title flare, tactical portal brackets (static/CSS)">
+<meta name="gimmick-revision" content="v41.8: observatory polish — RA-Dec grid, target reticles, anamorphic title flare, tactical portal brackets + mobile-landscape 4-zone layout (static/CSS)">
 </head>
 <body data-gimmick-baseline="v25" data-gimmick-revision="v41.9-observatory-mobile-safe">
 
@@ -1067,9 +1130,13 @@ function layout(){
   /* Canis Major: small + high, far from Gargantua to avoid lens stretch.
      Size kept comparable to Orion / Virgo. */
   /* Taurus: mid-left lower (horns left, tail right) — Hyades LOCK coords scaled into box. */
+  /* 4-Zone Landscape Layout Optimization */
   var boxes=portrait
     ?{canis:[W*.04,top+ah*.14,W*.28,top+ah*.40],virgo:[W*.52,top+ah*.72,W*.82,bot-34],orion:[W*.40,top-ah*.02,W*.72,top+ah*.32],taurus:[W*.12,top+ah*.64,W*.42,top+ah*.92]}
-    :{canis:[W*.04,top+ah*.12,W*.24,top+ah*.40],virgo:[W*.72,top+ah*.08,W*.98,bot-ah*.10],orion:[W*.36,top+ah*.02,W*.62,top+ah*.38],taurus:[W*.08,top+ah*.64,W*.38,top+ah*.92]};
+    :{canis:[W*.02,top+ah*.06,W*.16,top+ah*.48],
+      taurus:[W*.02,top+ah*.50,W*.17,bot-32],
+      orion:[W*.16,top+ah*.02,W*.31,bot-12],
+      virgo:[W*.66,top+ah*.06,W*.92,bot-12]};
   CONS.forEach(function(c){
     var b=boxes[c.id],bw=b[2]-b[0],bh=b[3]-b[1],sc=Math.min(bw/c.bw,bh/c.bh);
     var x0=b[0]+(bw-c.bw*sc)/2,y0=b[1]+(bh-c.bh*sc)/2;
@@ -1084,9 +1151,9 @@ function layout(){
      it reads as a blue stellar group rather than a fourth large constellation. */
   (function(){
     var sp=cons('virgo').stars.spica;
-    var ps=Math.min(W,H)*(W<500?.22:.24);
-    var targetX=sp.x-Math.min(W<500?105:155,W*.23);
-    var targetY=sp.y-Math.min(H<700?55:82,H*.12);
+    var ps=Math.min(W,H)*(portrait ? .22 : .20);
+    var targetX=sp.x-Math.min(portrait ? 105 : 130,W*.20);
+    var targetY=sp.y-Math.min(H<500 ? 40 : 65,H*.10);
     PLEIADES.scale=ps;
     PLEIADES.x=targetX-.356*ps;
     PLEIADES.y=targetY-.723*ps;
@@ -1099,8 +1166,8 @@ function layout(){
   CAPS.virgo.style.transform='translate('+Math.round(v.maxX-42)+'px,'+Math.round(v.minY-24)+'px)';
   CAPS.canis.style.transform='translate('+Math.round((cm.minX+cm.maxX)/2-48)+'px,'+Math.round(cm.maxY+18)+'px)';
   if(tau&&CAPS.taurus)CAPS.taurus.style.transform='translate('+Math.round((tau.minX+tau.maxX)/2-28)+'px,'+Math.round(tau.maxY+18)+'px)';
-  BH.R=portrait?Math.min(30,W*.075):Math.min(38,ah*.075);
-  BH.hx=W*.5;BH.hy=portrait?top+ah*.48:top+ah*.27;
+  BH.R=portrait?Math.min(30,W*.075):Math.min(30,ah*.11);
+  BH.hx=W*.5;BH.hy=portrait?top+ah*.48:top+ah*.44;
   if(!drag.on){BH.x=BH.hx;BH.y=BH.hy;}
   var bhEl=$('#bh');bhEl.style.width=Math.round(BH.R*16)+'px';bhEl.style.height=Math.round(BH.R*10)+'px';
   bhEl.style.transform='translate('+Math.round(BH.x-BH.R*8)+'px,'+Math.round(BH.y-BH.R*5)+'px)';
@@ -1147,8 +1214,10 @@ function layout(){
     if(p.id==='band' && W<=420) p.lx-=6;
     p.fx=p.lx;p.fy=p.ly;
     /* Hard cap so DUMUL/YouTube panels stay compact and never cover Sirius / Rigel / other triggers */
-    var mw=Math.min(W<600?100:128,Math.max(80,W-p.fx-16));
-    p.el.style.maxWidth=mw+'px';
+    /* Membatasi lebar portal DUMUL agar berhenti bersih di W * 0.42 (sebelum halo Gargantua W * 0.44) */
+    var maxAllowed = !portrait && p.id==='band' ? Math.max(50, Math.floor(W*.42 - p.fx)) : (W - p.fx - 16);
+    var mw = Math.min(W<600?88:115, maxAllowed);
+    p.el.style.maxWidth = mw + 'px';
   });
   var bgOrientation=W<H?'portrait':'landscape';
   var oldOrientation=bgW<bgH?'portrait':'landscape';
