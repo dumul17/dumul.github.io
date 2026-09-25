@@ -13,7 +13,7 @@ Live: [dumul17.github.io](https://dumul17.github.io/)
 | **Observatory** | `index.html` | Full-screen star field: constellations, black hole, portals, SFX stars, mini music HUD |
 | **DUMUL** | `dumul.html` | Band / album page — *Limerence* tracks, synced lyrics, ambient bed |
 
-Entry is the Observatory. The **DUMUL** portal (and Gargantua swallow) leads into `dumul.html`. A “✦ Dumul's Constellation” link brings you back.
+Entry is the Observatory. The **DUMUL** portal (and Gargantua swallow) leads into `dumul.html`. A “✦ Dumul's Observatory” link brings you back.
 
 ---
 
