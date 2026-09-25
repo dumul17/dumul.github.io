@@ -2691,10 +2691,10 @@ window.addEventListener('pageshow',function(e){
        Streams spawn already mid-fall so the first frame is a full rain field. */
     var cols=[],baseFont,dprM;
     var LAYERS=[
-      {depth:0.22,speedMul:0.28,alphaMul:0.22,fontScale:0.62,countMul:1.55,blur:0},
-      {depth:0.48,speedMul:0.52,alphaMul:0.48,fontScale:0.82,countMul:1.15,blur:0},
-      {depth:0.78,speedMul:0.88,alphaMul:0.82,fontScale:1.00,countMul:0.85,blur:10},
-      {depth:1.00,speedMul:1.18,alphaMul:1.00,fontScale:1.12,countMul:0.55,blur:16}
+      {depth:0.22,speedMul:0.28,alphaMul:0.22,fontScale:0.62,countMul:1.55},
+      {depth:0.48,speedMul:0.52,alphaMul:0.48,fontScale:0.82,countMul:1.15},
+      {depth:0.78,speedMul:0.88,alphaMul:0.82,fontScale:1.00,countMul:0.85},
+      {depth:1.00,speedMul:1.18,alphaMul:1.00,fontScale:1.12,countMul:0.55}
     ];
     function makeStream(layer,w,h,midway){
       var fs=Math.max(8,Math.round(baseFont*layer.fontScale));
@@ -2768,16 +2768,11 @@ window.addEventListener('pageshow',function(e){
           if(gy<-fs||gy>h)continue;
           var ch=c.chars[j];
           if(j===0){
-            /* Bright head only on nearer layers; far layers stay soft. */
+            /* Bright head on nearer layers; far layers stay soft. No shadowBlur. */
             if(L.depth>=0.7){
-              cx.fillStyle='#ffffff';
-              if(!IS_POTATO&&L.blur){
-                cx.shadowColor='rgba('+rgb.r+','+rgb.g+','+rgb.b+',0.9)';
-                cx.shadowBlur=L.blur;
-              }
               cx.globalAlpha=aMul;
+              cx.fillStyle='#ffffff';
               cx.fillText(ch,x,gy);
-              cx.shadowBlur=0;
             }else{
               cx.globalAlpha=aMul*0.85;
               cx.fillStyle='rgba('+Math.min(255,rgb.r+30)+','+Math.min(255,rgb.g+30)+','+Math.min(255,rgb.b+30)+',0.7)';
