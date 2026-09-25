@@ -551,7 +551,7 @@ function updateAudioViz(now){
    - one fixed colour: less compositing/colour work and a calmer look
    - adaptive bar count follows viewport size, with a lower cap on potato devices
 */
-var AVP={pts:null,N:0,stamp:-1,baseR:0};
+var AVP={pts:null,N:0,stamp:-1,baseR:0,fullPts:null,fullN:0};
 /* Adaptive star colour: only one RGB string is used by the whole visualizer.
    The target is changed once when the active star changes; the tiny RGB
    interpolation below keeps transitions smooth without doing colour math per bar. */
@@ -608,6 +608,18 @@ function ensureAVProfile(){
     AVP.pts[j*3]=Math.cos(ang);
     AVP.pts[j*3+1]=Math.sin(ang);
   }
+  /* Fake bars: one extra bar interleaved between every pair of real bars
+     (same count as the real ones, so the ring is twice as dense). Each
+     fake bar borrows its length from the real bar right before it, so
+     it never needs its own spectrum sample. */
+  var FN=N*2;
+  AVP.fullPts=new Float32Array(FN*2);
+  for(var k=0;k<FN;k++){
+    var fang=(k/FN)*6.28318530718-Math.PI*.5;
+    AVP.fullPts[k*2]=Math.cos(fang);
+    AVP.fullPts[k*2+1]=Math.sin(fang);
+  }
+  AVP.fullN=FN;
   AVP.stamp=-1;
   return N;
 }
@@ -641,16 +653,20 @@ function drawAudioVisualizer(now,R){
     if(!R||R<1)return;
     if(AVP.stamp!==AV.skip||!AVP.pts||AV.fallback)buildAVProfile();
 
-    var pts=AVP.pts,N=AVP.N;
+    var pts=AVP.pts,fullPts=AVP.fullPts,FN=AVP.fullN;
     var lv=AV.level,beat=AV.beat;
     var inner=R*1.045;
 
     /* Longer bars are deliberate: the old profile topped out too close to
        the Gargantua edge, so the spectrum became hard to read from a distance.
        Keep the renderer cheap, but give normal energy and especially transients
-       substantially more radial travel. */
-    var ampBase=R*(.075+.13*lv+.22*beat);
-    var ampSpec=R*(.22+.34*lv+.42*beat);
+       substantially more radial travel.
+       Trimmed to 50% of that length, then the ring is filled back out with
+       fake bars (same count as the real ones) interleaved between them; each
+       fake bar reuses its preceding real bar's length so it reads as one
+       continuous, denser ring instead of a sparser one. */
+    var ampBase=R*(.075+.13*lv+.22*beat)*.5;
+    var ampSpec=R*(.22+.34*lv+.42*beat)*.5;
 
     /* One path = one Canvas stroke.  A single colour keeps compositing cheap. */
     g.save();
@@ -660,19 +676,30 @@ function drawAudioVisualizer(now,R){
     g.lineCap='round';
     g.beginPath();
 
-    for(var j=0;j<N;j++){
-      var fv=pts[j*3+2];
+    for(var k=0;k<FN;k++){
+      var ri=k>>1;
+      var fv;
+      if(k&1){
+        /* Fake bar sits between real bar ri and the next one: take whichever
+           side is taller so a spike on either neighbour carries through. */
+        var riNext=(ri+1)%AVP.N;
+        var fvA=pts[ri*3+2],fvB=pts[riNext*3+2];
+        fv=fvA>fvB?fvA:fvB;
+      }else{
+        fv=pts[ri*3+2];
+      }
       /* Gamma lift makes quieter FFT bins visible without multiplying the
          number of bars or doing another analyser pass. */
       fv=Math.min(1.12,Math.pow(fv,.72)*1.08);
       var rr=inner+ampBase+fv*ampSpec;
       /* Beat transient is intentionally large and remains visible even when
          the instantaneous FFT frame is a little soft. */
-      if(beat>.12)rr+=R*(.055+.12*beat);
-      var x=pts[j*3]*inner;
-      var y=pts[j*3+1]*inner;
-      var x2=pts[j*3]*rr;
-      var y2=pts[j*3+1]*rr;
+      if(beat>.12)rr+=R*(.055+.12*beat)*.5;
+      var cx=fullPts[k*2],cy=fullPts[k*2+1];
+      var x=cx*inner;
+      var y=cy*inner;
+      var x2=cx*rr;
+      var y2=cy*rr;
       g.moveTo(x,y);g.lineTo(x2,y2);
     }
     g.stroke();
