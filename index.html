@@ -30,7 +30,9 @@ body{background:radial-gradient(120% 80% at 50% 28%,#10222f 0%,#08121b 55%,#0408
 #sky{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
 .scan{position:fixed;inset:0;pointer-events:none;z-index:2;background:repeating-linear-gradient(0deg,rgba(255,255,255,.022) 0 1px,transparent 1px 3px)}
 header{position:fixed;top:0;left:0;right:0;z-index:3;text-align:center;padding:calc(24px + env(safe-area-inset-top,0px)) 16px 0;pointer-events:none}
-h1{margin:0;display:inline-block;pointer-events:auto;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+h1{position:relative;margin:0;display:inline-block;pointer-events:auto;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+h1::before{content:'';position:absolute;top:50%;left:50%;width:0%;height:2px;transform:translate(-50%,-50%);background:linear-gradient(90deg,transparent,#6ee5ff,#ffffff,#6ee5ff,transparent);box-shadow:0 0 12px #6ee5ff,0 0 24px rgba(110,229,255,.8);opacity:0;pointer-events:none;transition:width .3s ease,opacity .3s ease;z-index:-1}
+h1.gl::before{width:140%;opacity:.85}
 .kicker{display:block;font:600 12px/1 'Syne',sans-serif;letter-spacing:.55em;padding-left:.55em;text-transform:uppercase;color:#6ee5ff}
 .big{display:block;margin-top:9px;white-space:nowrap;font:800 clamp(20px,min(7vw,10vh),56px)/1.02 'Syne',sans-serif;letter-spacing:.06em;padding-left:.06em;text-transform:uppercase;color:#eaf6ff;text-shadow:0 0 22px rgba(110,229,255,.45),0 0 2px rgba(255,255,255,.35)}
 .sub{margin:10px 0 0;font-size:11px;letter-spacing:.32em;padding-left:.32em;text-transform:uppercase;color:rgba(184,198,214,.72)}
@@ -76,6 +78,16 @@ footer nav svg{width:15px;height:15px;display:block}
 @media (max-width:520px){#bh-clock{font-size:7.5px;letter-spacing:.06em}#bh-clock .clock-time{font-size:9.5px;letter-spacing:.025em}#bh-clock .clock-sep{padding:0 2px}}
 #betel-fx{position:fixed;left:0;top:0;z-index:4;width:52px;height:52px;margin:-26px 0 0 -26px;border:0;border-radius:50%;padding:0;background:transparent;cursor:pointer;outline:none;-webkit-tap-highlight-color:transparent}
 #betel-fx:focus-visible{outline:2px solid #ff7ad9;outline-offset:2px}
+/* Observatory instrument reticle: native CSS cursor, no JS/render-loop work. */
+#betel-fx,#rigel-fx,#sirius-fx,#pleione-fx,#aldebaran-fx,.hit,#bh{cursor:crosshair}
+/* Tactical HUD corner brackets for portal labels. */
+.portal .lab{position:relative}
+.portal .lab::before,.portal .lab::after{content:'';position:absolute;top:0;width:5px;height:5px;pointer-events:none}
+.portal .lab::before{left:0;border-top:1px solid rgba(110,229,255,.6);border-left:1px solid rgba(110,229,255,.6)}
+.portal .lab::after{right:0;bottom:0;top:auto;border-bottom:1px solid rgba(110,229,255,.6);border-right:1px solid rgba(110,229,255,.6)}
+.portal:hover .lab::before,.portal:hover .lab::after,.portal.hot .lab::before,.portal.hot .lab::after,.portal:focus-visible .lab::before,.portal:focus-visible .lab::after{border-color:#6ee5ff}
+.portal:hover .lab::before,.portal.hot .lab::before,.portal:focus-visible .lab::before{box-shadow:1px -1px 4px rgba(110,229,255,.5)}
+.portal:hover .lab::after,.portal.hot .lab::after,.portal:focus-visible .lab::after{box-shadow:-1px 1px 4px rgba(110,229,255,.5)}
 /* visual trigger bintang: ring pulse dirender di canvas, hit area tetap transparan */
 .portal
 ,.hit{position:fixed;left:0;top:0;z-index:4}
@@ -113,8 +125,8 @@ body.konami .scan{background:repeating-linear-gradient(0deg,rgba(255,43,214,.08)
 body.konami #title .big,body.konami #title .kicker{color:#ff7ad9;text-shadow:0 0 18px rgba(255,43,214,.7),0 0 10px rgba(34,230,255,.45)}
 body.konami #sky{animation:cyberGlitch .55s steps(2,end) 3}
 @keyframes cyberGlitch{0%,100%{transform:none;filter:none}20%{transform:translateX(-3px);filter:hue-rotate(-40deg) saturate(1.8)}45%{transform:translateX(4px);filter:hue-rotate(160deg) saturate(2.2)}70%{transform:translateX(-1px);filter:hue-rotate(-20deg) saturate(1.6)}}
-.portal .lab:after{content:'OPEN →';display:block;margin-top:3px;font:600 7px/1 'Courier New',monospace;letter-spacing:.12em;color:rgba(110,229,255,.42);transition:color .2s,transform .2s}
-.portal:hover .lab:after,.portal.hot .lab:after,.portal:focus-visible .lab:after{color:#6ee5ff;transform:translateX(3px)}
+.portal .lab-open{display:block;margin-top:3px;font:600 7px/1 'Courier New',monospace;letter-spacing:.12em;color:rgba(110,229,255,.42);transition:color .2s,transform .2s}
+.portal:hover .lab-open,.portal.hot .lab-open,.portal:focus-visible .lab-open{color:#6ee5ff;transform:translateX(3px)}
 /* tap/hover feedback for constellation geometry */
 .cons-hot-line{filter:drop-shadow(0 0 4px rgba(110,229,255,.45))}
 @media (max-width:600px){
@@ -129,7 +141,7 @@ body.konami #sky{animation:cyberGlitch .55s steps(2,end) 3}
   .portal .lab{padding:4px 7px}
   .portal b{font-size:10px;letter-spacing:.12em}
   .portal small{font-size:8px;margin-top:2px}
-  .portal .lab:after{font-size:6.5px;margin-top:2px}
+  .portal .lab-open{font-size:6.5px;margin-top:2px}
 }
 
 @media (prefers-reduced-motion:reduce){h1.gl .big,h1.gl .kicker{animation-duration:.01s}}
@@ -225,9 +237,9 @@ body.konami #sky{animation:cyberGlitch .55s steps(2,end) 3}
 }
 
 </style>
-<meta name="gimmick-revision" content="v41.6.5: drag highlight ring also locked to diskAng (no more wobble split), warp-ring loop 18→9/4 for cheaper drag">
+<meta name="gimmick-revision" content="v41.8: observatory polish — RA-Dec grid, target reticles, anamorphic title flare, tactical portal brackets (static/CSS)">
 </head>
-<body data-gimmick-baseline="v25" data-gimmick-revision="v41.6.5-drag-locked">
+<body data-gimmick-baseline="v25" data-gimmick-revision="v41.9-observatory-mobile-safe">
 
 <div id="boot-screen" aria-hidden="false">
   <div id="boot-matrix" aria-hidden="true"></div>
@@ -1011,7 +1023,7 @@ function tickClock(){
 PORTALS.forEach(function(p){
   p.c=cons(p.cons);p.h=0;
   var a=document.createElement('a');a.className='portal';a.href=p.href;
-  a.innerHTML='<span class="lab"><b></b><small></small></span>';
+  a.innerHTML='<span class="lab"><b></b><small></small><em class="lab-open">OPEN →</em></span>';
   a.querySelector('b').textContent=p.title;a.querySelector('small').textContent=p.sub;
   var h=document.createElement('a');h.className='hit';h.tabIndex=-1;h.setAttribute('aria-hidden','true');
   if(p.id==='yt'){
@@ -1131,6 +1143,8 @@ function layout(){
       p.ly=s.y;
     }
     /* Fixed screen anchors — panels stay put; only the connector line stretches. */
+    if(p.id==='band' && W<=700) p.lx-=10;
+    if(p.id==='band' && W<=420) p.lx-=6;
     p.fx=p.lx;p.fy=p.ly;
     /* Hard cap so DUMUL/YouTube panels stay compact and never cover Sirius / Rigel / other triggers */
     var mw=Math.min(W<600?100:128,Math.max(80,W-p.fx-16));
@@ -1190,8 +1204,69 @@ function layout(){
       bgCtx.fillStyle=gh;bgCtx.globalAlpha=.78;bgCtx.beginPath();bgCtx.ellipse(0,0,w*1.7,h*1.8,0,0,6.283);bgCtx.fill();
       bgCtx.globalAlpha=.22;bgCtx.strokeStyle='rgba('+gc.outer+',.82)';bgCtx.lineWidth=.5;bgCtx.beginPath();bgCtx.ellipse(0,0,w,h,.06,0,6.283);bgCtx.stroke();
       bgCtx.fillStyle='rgba('+gc.core+',.30)';bgCtx.beginPath();bgCtx.ellipse(0,0,Math.max(.8,w*.17),Math.max(.55,h*.24),0,0,6.283);bgCtx.fill();
+      /* Dust lane: thin dark ellipse bisecting the bright core (edge-on spiral feel) */
+      bgCtx.globalAlpha=1;
+      bgCtx.fillStyle='rgba(5,11,18,0.45)';
+      bgCtx.beginPath();bgCtx.ellipse(0,0,w*1.2,h*0.15,0,0,6.283);bgCtx.fill();
       bgCtx.restore();
     }
+    /* Observatory HUD corner reticles (static, zero runtime cost) */
+    (function(){
+      /* Responsive safe frame: keep corner HUD away from header/footer/logo
+         zones, especially on narrow portrait phones. */
+      var m=Math.max(10,Math.min(18,W*.035)),len=Math.min(22,Math.max(16,Math.min(W,H)*.055)),lw=1;
+      var topSafe=Math.max(44,Math.min(88,H*.105));
+      var bottomSafe=Math.max(42,Math.min(82,H*.105));
+      bgCtx.save();
+      bgCtx.strokeStyle='rgba(110,229,255,0.22)';
+      bgCtx.fillStyle='rgba(110,229,255,0.18)';
+      bgCtx.lineWidth=lw;
+      bgCtx.font='600 8px "Courier New",monospace';
+      bgCtx.textBaseline='top';
+      /* top-left */
+      bgCtx.beginPath();bgCtx.moveTo(m,topSafe+len);bgCtx.lineTo(m,topSafe);bgCtx.lineTo(m+len,topSafe);bgCtx.stroke();
+      bgCtx.fillText('[ LAT 00°00′N ]',m+4,topSafe+4);
+      /* top-right */
+      bgCtx.beginPath();bgCtx.moveTo(W-m-len,topSafe);bgCtx.lineTo(W-m,topSafe);bgCtx.lineTo(W-m,topSafe+len);bgCtx.stroke();
+      bgCtx.textAlign='right';
+      bgCtx.fillText('[ LON 000°00′E ]',W-m-4,topSafe+4);
+      /* bottom-left */
+      bgCtx.textAlign='left';bgCtx.textBaseline='bottom';
+      bgCtx.beginPath();bgCtx.moveTo(m,H-bottomSafe-len);bgCtx.lineTo(m,H-bottomSafe);bgCtx.lineTo(m+len,H-bottomSafe);bgCtx.stroke();
+      bgCtx.fillText('[ AZ 000° ]',m+4,H-bottomSafe-4);
+      /* bottom-right */
+      bgCtx.textAlign='right';
+      bgCtx.beginPath();bgCtx.moveTo(W-m-len,H-bottomSafe);bgCtx.lineTo(W-m,H-bottomSafe);bgCtx.lineTo(W-m,H-bottomSafe-len);bgCtx.stroke();
+      bgCtx.fillText('[ EL 00° ]',W-m-4,H-bottomSafe-4);
+      bgCtx.restore();
+    })();
+
+    /* Equatorial RA/Dec grid — baked into bgCanvas, so it is redrawn only
+       when the static background is rebuilt (boot/resize), never per RAF. */
+    (function(){
+      bgCtx.save();
+      bgCtx.strokeStyle='rgba(110,229,255,.035)';
+      bgCtx.lineWidth=.7;
+      bgCtx.setLineDash([4,8]);
+
+      /* Declination lines. */
+      for(var dec=.2;dec<1;dec+=.2){
+        bgCtx.beginPath();
+        bgCtx.moveTo(0,H*dec);
+        bgCtx.lineTo(W,H*dec);
+        bgCtx.stroke();
+      }
+
+      /* Right Ascension meridians: restrained ellipses give the sky-map feel. */
+      for(var ra=-.2;ra<=1.2;ra+=.35){
+        bgCtx.beginPath();
+        bgCtx.ellipse(W*ra,H*.5,W*.25,H*.8,.2,0,6.283);
+        bgCtx.stroke();
+      }
+      bgCtx.setLineDash([]);
+      bgCtx.restore();
+    })();
+
     bgDirty=false;
   }
 }
@@ -1585,6 +1660,10 @@ function drawDistantGalaxies(now){
     g.globalAlpha=.22+.07*pulse;g.strokeStyle='rgba('+gc.outer+',.82)';g.lineWidth=.5;g.beginPath();g.ellipse(0,0,w,h,.06,0,6.283);g.stroke();
     g.globalAlpha=.12+.06*pulse;g.strokeStyle='rgba('+gc.halo+',.78)';g.lineWidth=.55;g.beginPath();g.ellipse(0,0,w*.62,h*.52,.12,0,6.283);g.stroke();
     g.fillStyle='rgba('+gc.core+',.30)';g.beginPath();g.ellipse(0,0,Math.max(.8,w*.17),Math.max(.55,h*.24),0,0,6.283);g.fill();
+    /* Dust lane: thin dark ellipse bisecting the bright core (edge-on spiral feel) */
+    g.globalAlpha=1;
+    g.fillStyle='rgba(5,11,18,0.45)';
+    g.beginPath();g.ellipse(0,0,w*1.2,h*0.15,0,0,6.283);g.fill();
     g.restore();
   }
 }
@@ -1766,7 +1845,10 @@ function drawFloatingTelescope(now){
     g.fillRect(-27,-2,4,4);
     g.strokeStyle='rgb(146,162,171)';g.lineWidth=.8;
     g.beginPath();g.moveTo(-25,0);g.lineTo(-33,0);g.stroke();
-    g.fillStyle='rgb(91,208,226)';g.beginPath();g.arc(-34,0,1.6,0,6.283);g.fill();
+    /* Beacon LED status light on rear antenna tip (observatory satellite feel) */
+    var beacon=Math.sin(now*0.006)>0.6?1:0.15;
+    g.fillStyle='rgba(110,229,255,'+beacon+')';
+    g.beginPath();g.arc(-34,0,1.8,0,6.283);g.fill();
 
     /* Small service-box details: opaque and restrained. */
     g.fillStyle='rgb(91,105,114)';g.fillRect(-4,-15,9,3);g.fillRect(-3,12,8,3);
@@ -2210,7 +2292,15 @@ function drawPulses(now,age){
     }
     if(drawn>1)g.stroke();
     var qp=gSky(A.x+(B.x-A.x)*u+ox,A.y+(B.y-A.y)*u+oy);
-    if(qp[2]<1){g.fillStyle='rgba(235,250,255,'+al+')';g.beginPath();g.arc(qp[0],qp[1],2,0,6.283);g.fill();}
+    if(qp[2]<1){
+      g.fillStyle='rgba(235,250,255,'+al+')';g.beginPath();g.arc(qp[0],qp[1],2,0,6.283);g.fill();
+      /* Micro-spark when pulse arrives at target star */
+      if(u>0.90){
+        var sparkA=(u-0.90)*10;
+        g.fillStyle='rgba(235,250,255,'+(0.8*sparkA)+')';
+        g.beginPath();g.arc(qp[0],qp[1],2.5+sparkA*2,0,6.283);g.fill();
+      }
+    }
   }
 }
 function drawPortals(age,now){
