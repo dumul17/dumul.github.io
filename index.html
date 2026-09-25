@@ -864,6 +864,7 @@ function playingConstellationId(){
   if(activeSfx===SFX.spica)return 'virgo';
   if(activeSfx===SFX.sirius)return 'canis';
   if(activeSfx===SFX.pleione)return 'pleiades';
+  if(activeSfx===SFX.aldebaran)return 'taurus';
   return null;
 }
 function updateConstellationFocus(now){
@@ -1023,8 +1024,8 @@ function layout(){
      Size kept comparable to Orion / Virgo. */
   /* Taurus: mid-left lower (horns left, tail right) — Hyades LOCK coords scaled into box. */
   var boxes=portrait
-    ?{canis:[W*.04,top+ah*.14,W*.28,top+ah*.40],virgo:[W*.52,top+ah*.72,W*.82,bot-34],orion:[W*.40,top-ah*.02,W*.72,top+ah*.32],taurus:[W*.02,top+ah*.48,W*.48,bot-28]}
-    :{canis:[W*.04,top+ah*.12,W*.24,top+ah*.40],virgo:[W*.72,top+ah*.08,W*.98,bot-ah*.10],orion:[W*.36,top+ah*.02,W*.62,top+ah*.38],taurus:[W*.02,top+ah*.48,W*.34,bot-ah*.04]};
+    ?{canis:[W*.04,top+ah*.14,W*.28,top+ah*.40],virgo:[W*.52,top+ah*.72,W*.82,bot-34],orion:[W*.40,top-ah*.02,W*.72,top+ah*.32],taurus:[W*.12,top+ah*.64,W*.42,top+ah*.92]}
+    :{canis:[W*.04,top+ah*.12,W*.24,top+ah*.40],virgo:[W*.72,top+ah*.08,W*.98,bot-ah*.10],orion:[W*.36,top+ah*.02,W*.62,top+ah*.38],taurus:[W*.08,top+ah*.64,W*.38,top+ah*.92]};
   CONS.forEach(function(c){
     var b=boxes[c.id],bw=b[2]-b[0],bh=b[3]-b[1],sc=Math.min(bw/c.bw,bh/c.bh);
     var x0=b[0]+(bw-c.bw*sc)/2,y0=b[1]+(bh-c.bh*sc)/2;
@@ -1040,8 +1041,8 @@ function layout(){
   (function(){
     var sp=cons('virgo').stars.spica;
     var ps=Math.min(W,H)*(W<500?.22:.24);
-    var targetX=sp.x-Math.min(W<500?141:188,W*.28);
-    var targetY=sp.y-Math.min(H<700?78:105,H*.15);
+    var targetX=sp.x-Math.min(W<500?105:155,W*.23);
+    var targetY=sp.y-Math.min(H<700?55:82,H*.12);
     PLEIADES.scale=ps;
     PLEIADES.x=targetX-.356*ps;
     PLEIADES.y=targetY-.723*ps;
@@ -1918,7 +1919,7 @@ function drawStars(c,age,now){
       g.fillStyle=gr;g.beginPath();g.arc(x,y,r*5,0,6.283);g.fill();
       g.fillStyle='rgba(255,255,255,'+(.95*a)+')';g.beginPath();g.arc(x,y,Math.max(.9,r*.62),0,6.283);g.fill();
     }
-    if(s.r>=2.9){
+    if(s.r>=2.9 && !(c.id==='taurus' && k==='elnath')){
       g.strokeStyle='rgba('+s.rgb+','+(.4*a*tw)+')';g.lineWidth=.8;
       g.beginPath();g.moveTo(x-r*4.2,y);g.lineTo(x+r*4.2,y);g.moveTo(x,y-r*4.2);g.lineTo(x,y+r*4.2);g.stroke();
     }
