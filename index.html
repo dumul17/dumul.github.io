@@ -225,9 +225,9 @@ body.konami #sky{animation:cyberGlitch .55s steps(2,end) 3}
 }
 
 </style>
-<meta name="gimmick-revision" content="v41.5: depth matrix rain + capsule gate (blue=observatory, red=source)">
+<meta name="gimmick-revision" content="v41.6.5: drag highlight ring also locked to diskAng (no more wobble split), warp-ring loop 18→9/4 for cheaper drag">
 </head>
-<body data-gimmick-baseline="v25" data-gimmick-revision="v41.5-depth-capsule">
+<body data-gimmick-baseline="v25" data-gimmick-revision="v41.6.5-drag-locked">
 
 <div id="boot-screen" aria-hidden="false">
   <div id="boot-matrix" aria-hidden="true"></div>
@@ -1241,7 +1241,7 @@ function gravityPos(x,y){
   var q=lens(x,y);
   return q ? [q[0],q[1],0] : [x,y,1];
 }
-function buildSprite(){                   /* layered gravitational lens: luminous, deep, photorealistic feel */
+function buildSprite(){                   /* layered gravitational lens: luminous, deep, photorealistic feel + Doppler / photon ring / secondary lens */
   var R=BH.R,S=Math.ceil(R*13),d=DPR,c=document.createElement('canvas');
   c.width=c.height=Math.ceil(S*d);
   var s=c.getContext('2d');s.scale(d,d);
@@ -1275,54 +1275,67 @@ function buildSprite(){                   /* layered gravitational lens: luminou
   });
   s.shadowBlur=0;
 
-  /* Broad, layered accretion disk. It is thin at the equator but has depth and haze. */
+  /* Broad, layered accretion disk with Doppler beaming asymmetry.
+     Approaching side (left, blueshift) is brighter/cooler; receding side (right, redshift) is warmer/dimmer. */
   var ang=-.48;
   s.save();s.translate(cx,cy);s.rotate(ang);
   var outer=s.createLinearGradient(-R*5.1,0,R*5.1,0);
   outer.addColorStop(0,'rgba(45,80,130,0)');
-  outer.addColorStop(.14,'rgba(80,125,185,.10)');
-  outer.addColorStop(.29,'rgba(125,170,220,.24)');
-  outer.addColorStop(.42,'rgba(205,225,240,.52)');
-  outer.addColorStop(.49,'rgba(250,249,240,.78)');
-  outer.addColorStop(.56,'rgba(255,218,192,.55)');
-  outer.addColorStop(.68,'rgba(160,185,220,.28)');
-  outer.addColorStop(.84,'rgba(75,110,165,.10)');
-  outer.addColorStop(1,'rgba(35,60,100,0)');
+  outer.addColorStop(.10,'rgba(90,150,210,.14)');
+  outer.addColorStop(.22,'rgba(160,210,245,.38)');
+  outer.addColorStop(.36,'rgba(230,245,255,.72)');
+  outer.addColorStop(.46,'rgba(255,255,252,.92)');
+  outer.addColorStop(.54,'rgba(255,200,160,.48)');
+  outer.addColorStop(.66,'rgba(180,120,90,.22)');
+  outer.addColorStop(.80,'rgba(100,70,55,.08)');
+  outer.addColorStop(1,'rgba(35,40,50,0)');
   s.fillStyle=outer;s.shadowColor='rgba(170,205,240,.34)';s.shadowBlur=R*.34;
   s.beginPath();s.ellipse(0,0,R*(IS_POTATO?3.8:4.9),R*(IS_POTATO?.11:.16),0,0,6.283);s.fill();
   s.shadowBlur=0;
 
   var mid=s.createLinearGradient(-R*4.7,0,R*4.7,0);
-  mid.addColorStop(0,'rgba(80,120,180,0)');
-  mid.addColorStop(.34,'rgba(155,190,225,.13)');
-  mid.addColorStop(.46,'rgba(235,241,244,.58)');
-  mid.addColorStop(.54,'rgba(255,232,215,.48)');
-  mid.addColorStop(.67,'rgba(125,160,210,.16)');
-  mid.addColorStop(1,'rgba(60,95,150,0)');
+  mid.addColorStop(0,'rgba(70,130,200,0)');
+  mid.addColorStop(.28,'rgba(150,205,245,.22)');
+  mid.addColorStop(.42,'rgba(240,248,255,.70)');
+  mid.addColorStop(.50,'rgba(255,245,230,.58)');
+  mid.addColorStop(.60,'rgba(255,190,140,.32)');
+  mid.addColorStop(.76,'rgba(140,90,70,.12)');
+  mid.addColorStop(1,'rgba(50,40,35,0)');
   s.fillStyle=mid;s.beginPath();s.ellipse(0,0,R*(IS_POTATO?3.7:4.75),R*(IS_POTATO?.055:.075),0,0,6.283);s.fill();
   s.restore();
+
+  /* Secondary lens is drawn dynamically in drawHole so it always shares the
+     live disk inclination (including inertia wobble while dragging). */
 
   /* Dark event horizon: clean and deep. */
   s.globalCompositeOperation='source-over';
   s.fillStyle='#000102';s.beginPath();s.arc(cx,cy,R*1.015,0,6.283);s.fill();
 
-  /* Crisp Einstein ring over the horizon. */
+  /* Photon sphere / gravitational redshift ring — thin warm rim just inside Einstein ring. */
   s.globalCompositeOperation='lighter';
+  s.strokeStyle='rgba(255,90,45,.32)';
+  s.lineWidth=Math.max(.5,R*.012);
+  s.beginPath();s.arc(cx,cy,R*1.012,0,6.283);s.stroke();
+  s.strokeStyle='rgba(255,140,70,.18)';
+  s.lineWidth=Math.max(.4,R*.008);
+  s.beginPath();s.arc(cx,cy,R*1.006,0,6.283);s.stroke();
+
+  /* Crisp Einstein ring over the horizon. */
   s.strokeStyle='rgba(250,252,252,.96)';s.lineWidth=Math.max(1,R*.026);
   s.shadowColor='rgba(195,220,246,.62)';s.shadowBlur=R*.18;
   s.beginPath();s.arc(cx,cy,R*1.028,0,6.283);s.stroke();
   s.shadowBlur=0;
 
-  /* Foreground edge of the disk crosses in front of the black hole. */
+  /* Foreground edge of the disk crosses in front of the black hole (Doppler-aware). */
   s.save();s.translate(cx,cy);s.rotate(ang);
   var fg=s.createLinearGradient(-R*4.8,0,R*4.8,0);
-  fg.addColorStop(0,'rgba(65,105,165,0)');
-  fg.addColorStop(.26,'rgba(130,175,220,.13)');
-  fg.addColorStop(.41,'rgba(225,237,244,.46)');
-  fg.addColorStop(.49,'rgba(255,255,251,.82)');
-  fg.addColorStop(.55,'rgba(255,218,198,.56)');
-  fg.addColorStop(.69,'rgba(125,165,215,.18)');
-  fg.addColorStop(1,'rgba(55,90,145,0)');
+  fg.addColorStop(0,'rgba(55,100,170,0)');
+  fg.addColorStop(.20,'rgba(140,195,240,.18)');
+  fg.addColorStop(.36,'rgba(235,245,255,.55)');
+  fg.addColorStop(.47,'rgba(255,255,252,.88)');
+  fg.addColorStop(.55,'rgba(255,210,175,.50)');
+  fg.addColorStop(.68,'rgba(180,120,85,.16)');
+  fg.addColorStop(1,'rgba(45,35,30,0)');
   s.fillStyle=fg;s.shadowColor='rgba(220,235,250,.38)';s.shadowBlur=R*.16;
   s.beginPath();s.ellipse(0,0,R*(IS_POTATO?3.7:4.7),R*(IS_POTATO?.026:.038),0,0,6.283);s.fill();
   s.restore();
@@ -1415,24 +1428,83 @@ function drawHole(now,age){
       g.beginPath();g.arc(0,0,rr,0,6.283);g.stroke();
     }
 
-    /* Thin moving heat on the accretion disk; restrained so it reads as matter, not neon. */
+    /* Disk plane is fixed at ang=-.48 (matches the baked sprite).
+       Secondary lens + plasma MUST use this same angle always — never apply
+       drag wobble here, or they separate from the sprite disk. */
+    var diskAng=-.48;
     var sp=.00024*(1+.55*BH.h+1.8*e);
+    g.save();g.rotate(diskAng);
     for(var m=0;m<(IS_POTATO?3:7);m++){
       var ph2=(now*sp+m/7)%1,u=ph2*2-1;
-      var al2=Math.pow(1-Math.abs(u),1.9)*(.18+.12*BH.h+.10*e);
+      var al2=Math.pow(1-Math.abs(u),1.9)*(.16+.12*BH.h+.10*e);
+      var tilt=(m%3-1)*.18;
       g.fillStyle='rgba(235,240,245,'+al2+')';
       g.beginPath();
-      g.ellipse(u*R*4.1,R*.02,R*(.025+.012*(1-Math.abs(u))),R*.018,0,0,6.283);
+      g.ellipse(u*R*4.1,R*(.02+tilt*.04),R*(.025+.012*(1-Math.abs(u))),R*.016,tilt,0,6.283);
       g.fill();
     }
+    if(!IS_POTATO){
+      for(var sa=0;sa<3;sa++){
+        var sph=(now*sp*.55+sa*.33)%1;
+        var saAl=(1-Math.abs(sph*2-1))* (.07+.05*BH.h);
+        g.strokeStyle='rgba(200,220,240,'+saAl+')';
+        g.lineWidth=.55;
+        g.beginPath();
+        g.ellipse(0,0,R*(3.2+sa*.55),R*(.045+sa*.012),sph*.4-0.2,0,6.283);
+        g.stroke();
+      }
+      /* Secondary lens — locked to sprite disk plane (no drag wobble). */
+      g.lineWidth=Math.max(.55,R*.016);
+      g.strokeStyle='rgba(200,220,245,.28)';
+      g.beginPath();
+      g.ellipse(0,-R*.02,R*1.55,R*.38,0,Math.PI*1.15,Math.PI*1.85);
+      g.stroke();
+      g.strokeStyle='rgba(240,245,255,.18)';
+      g.beginPath();
+      g.ellipse(0,-R*.02,R*1.42,R*.28,0,Math.PI*1.2,Math.PI*1.8);
+      g.stroke();
+      g.strokeStyle='rgba(200,220,245,.22)';
+      g.beginPath();
+      g.ellipse(0,R*.02,R*1.55,R*.38,0,Math.PI*.15,Math.PI*.85);
+      g.stroke();
+      g.strokeStyle='rgba(240,245,255,.14)';
+      g.beginPath();
+      g.ellipse(0,R*.02,R*1.42,R*.28,0,Math.PI*.2,Math.PI*.8);
+      g.stroke();
+    }
+    g.restore();
   }
 
   g.restore();
 
-  if(drag.on&&drag.moved){
+  if(drag.on&&drag.moved&&!reduce){
     g.save();g.globalCompositeOperation='lighter';
-    for(var di=1;di<=18;di++){
-      var dr=R*(2.2+di*3.7), da2=.34*(1-di/20);
+    /* Extra disk highlight while dragging. Rotation is LOCKED to the same
+       fixed diskAng as the secondary lens (-.48) — it used to add a
+       velocity-based wobble (-.48+wob2) on top of that, which visibly
+       rotated this ring away from the locked secondary lens/sprite disk
+       during fast drags, reading as the secondary lens "splitting off".
+       Drag velocity now only modulates brightness (wobS2), never angle. */
+    var vx2=(BH.x-drag.bx)*.0025,vy2=(BH.y-drag.by)*.0025;
+    var wobS2=Math.min(1,Math.hypot(vx2,vy2)*8);
+    g.save();
+    g.translate(BH.x,BH.y);
+    g.rotate(-.48);
+    g.strokeStyle='rgba(180,210,240,'+(.10+.08*wobS2)+')';
+    g.lineWidth=Math.max(.7,R*.02);
+    g.beginPath();g.ellipse(0,0,R*4.3,R*.09,0,0,6.283);g.stroke();
+    g.strokeStyle='rgba(255,220,190,'+(.06+.05*wobS2)+')';
+    g.lineWidth=Math.max(.5,R*.012);
+    g.beginPath();g.ellipse(0,0,R*3.6,R*.04,0,0,6.283);g.stroke();
+    g.restore();
+    /* Warp-ring loop is the expensive part of this effect (one arc+stroke
+       call per ring, every frame, for the whole drag gesture). Cut the
+       ring count well down (was a flat 18, even on low-end devices) and
+       keep the falloff spacing/opacity curve scaled to the new count so
+       the look stays the same, just cheaper to draw. */
+    var ringN=IS_POTATO?4:9;
+    for(var di=1;di<=ringN;di++){
+      var dr=R*(2.2+di*(66.6/ringN)), da2=.34*(1-di/(ringN+2));
       g.strokeStyle='rgba(130,170,205,'+(da2*.42)+')';g.lineWidth=.8+(di===1?.5:0);
       g.beginPath();g.arc(BH.x,BH.y,dr,0,6.283);g.stroke();
     }
