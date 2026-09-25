@@ -265,6 +265,7 @@ body.konami #sky{animation:cyberGlitch .55s steps(2,end) 3}
 <span class="cap" id="cap-orion" aria-hidden="true">Orion</span>
 <span class="cap" id="cap-virgo" aria-hidden="true">Virgo</span>
 <span class="cap" id="cap-canis" aria-hidden="true">Canis Major</span>
+<span class="cap" id="cap-taurus" aria-hidden="true">Taurus</span>
 <span class="cap" id="cap-bh" aria-hidden="true">Gargantua</span>
 <a id="bh" href="dumul.html" aria-label="Masuk ke DUMUL (lubang hitam Gargantua)" title="Gargantua"></a>
 <span id="bh-clock" aria-hidden="true"></span>
@@ -282,6 +283,7 @@ body.konami #sky{animation:cyberGlitch .55s steps(2,end) 3}
 <button id="betel-fx" type="button" aria-label="Putar suara Betelgeuse"></button>
 <button id="sirius-fx" type="button" class="hit" aria-label="Putar suara Sirius"></button>
 <button id="pleione-fx" type="button" class="hit" aria-label="Putar suara Pleione"></button>
+<button id="aldebaran-fx" type="button" class="hit" aria-label="Putar suara Aldebaran"></button>
 <div id="veil" aria-hidden="true"></div>
 <section id="music-player" aria-label="Music player" aria-hidden="true">
   <div class="mp-head"><div><span class="mp-kicker">Dumul's Observatory</span><strong>Music</strong></div><button id="music-close" type="button" aria-label="Tutup music player">×</button></div>
@@ -340,7 +342,7 @@ var SW=null,swP=0;
 var AMB=mkAudio('constellation.opus',.5,true);
 var GARG=mkAudio('collapsars.opus',0,true);
 var MUSIC_COLLAP=mkAudio('collapsars.opus',.5,true);
-var SFX={rigel:mkAudio('rigel.opus',.85,false),spica:mkAudio('spica.opus',.85,false),betel:mkAudio('betelgeuse.opus',.85,false),sirius:mkAudio('sirius.opus',.85,false),pleione:mkAudio('pleione.opus',.85,false)};
+var SFX={rigel:mkAudio('rigel.opus',.85,false),spica:mkAudio('spica.opus',.85,false),betel:mkAudio('betelgeuse.opus',.85,false),sirius:mkAudio('sirius.opus',.85,false),pleione:mkAudio('pleione.opus',.85,false),aldebaran:mkAudio('aldebaran.opus',.85,false)};
 function mkAudio(name,vol,loop){var a=new Audio(encodeURIComponent(name));a.preload='auto';a.loop=!!loop;a.volume=vol;return a;}
 function safePlay(a){
   if(!a)return false;
@@ -444,7 +446,7 @@ function audioVizInit(a){
       AV.prev=new Uint8Array(AV.an.frequencyBinCount);
       AV.an.connect(AV.ctx.destination);
     }
-    var key=SFX.rigel===a?'rigel':(SFX.spica===a?'spica':(SFX.betel===a?'betel':(SFX.sirius===a?'sirius':(SFX.pleione===a?'pleione':null))));
+    var key=SFX.rigel===a?'rigel':(SFX.spica===a?'spica':(SFX.betel===a?'betel':(SFX.sirius===a?'sirius':(SFX.pleione===a?'pleione':(SFX.aldebaran===a?'aldebaran':null)))));
     if(!key)return false;
     if(!AV.sources[key]){
       try{
@@ -561,6 +563,7 @@ function avColorForAudio(a){
     if(a===SFX.betel)return [255,72,64];
     if(a===SFX.sirius)return [180,220,255];
     if(a===SFX.pleione)return [145,170,255];
+    if(a===SFX.aldebaran)return [255,160,90];
   }
   return [155,215,255];
 }
@@ -755,7 +758,27 @@ var CONS=[
    tengahAtas:{fx:438,fy:520,r:1.6,c:'#cfeeff'},tengahBawah:{fx:414,fy:665,r:1.6,c:'#cfeeff'},adhara:{fx:448,fy:697,r:2.6,c:'#a8d4ff'},
    aludra:{fx:245,fy:776,r:2.4,c:'#cde6ff'},ekorKanan:{fx:768,fy:671,r:1.5,c:'#cfeeff'},ekorBawah:{fx:552,fy:803,r:1.5,c:'#cfeeff'}
   },
-  lines:[["theta","iota"],["theta","muliphein"],["iota","muliphein"],["muliphein","sirius"],["sirius","mulipheinBody"],["mirzam","mulipheinBody"],["sirius","wezenTop"],["wezenTop","wezen"],["mulipheinBody","furud"],["mulipheinBody","tengahAtas"],["tengahAtas","tengahBawah"],["tengahBawah","adhara"],["wezen","adhara"],["wezen","aludra"],["adhara","ekorKanan"],["adhara","ekorBawah"]]}
+  lines:[["theta","iota"],["theta","muliphein"],["iota","muliphein"],["muliphein","sirius"],["sirius","mulipheinBody"],["mirzam","mulipheinBody"],["sirius","wezenTop"],["wezenTop","wezen"],["mulipheinBody","furud"],["mulipheinBody","tengahAtas"],["tengahAtas","tengahBawah"],["tengahBawah","adhara"],["wezen","adhara"],["wezen","aludra"],["adhara","ekorKanan"],["adhara","ekorBawah"]]},
+ /* Taurus — coords LOCK from taurus_final (1000-space). Only Aldebaran is interactive. */
+ {id:'taurus',ra0:68.9,delay:1.0,phase:1.2,
+  stars:{
+   elnath:{fx:157,fy:204,r:3.2,c:'#eaf6ff'},
+   leftHorn:{fx:87,fy:423,r:1.7,c:'#dcefff'},
+   upperMid:{fx:400,fy:378,r:1.85,c:'#eaf6ff'},
+   theta1:{fx:481,fy:467,r:1.95,c:'#ffe9a0'},
+   theta2:{fx:514,fy:503,r:1.95,c:'#ffe9a0'},
+   aldebaran:{fx:443,fy:533,r:3.6,c:'#ffb27a',name:'Aldebaran',nx:-1,dy:2},
+   nearAlde:{fx:482,fy:542,r:1.55,c:'#eaf6ff'},
+   hyadesTip:{fx:536,fy:549,r:1.7,c:'#eaf6ff'},
+   tail1:{fx:651,fy:613,r:1.7,c:'#dcefff'},
+   tail2a:{fx:862,fy:671,r:1.7,c:'#dcefff'},
+   tail2b:{fx:878,fy:688,r:1.95,c:'#eaf6ff'}
+  },
+  lines:[
+   ["elnath","upperMid"],["upperMid","theta1"],["theta1","theta2"],["theta2","hyadesTip"],
+   ["hyadesTip","tail1"],["tail1","tail2a"],["tail2a","tail2b"],
+   ["leftHorn","aldebaran"],["aldebaran","nearAlde"],["nearAlde","hyadesTip"]
+  ]}
 ];
 
 CONS.forEach(function(c,ci){
@@ -775,7 +798,7 @@ CONS.forEach(function(c,ci){
     [l[0],l[1]].forEach(function(k){var s=c.stars[k];s.t0=Math.min(s.t0===c.delay+.2?1e9:s.t0,c.delay+i*.28);});
   });
 });
-var CAPS={orion:$('#cap-orion'),virgo:$('#cap-virgo'),canis:$('#cap-canis'),bh:$('#cap-bh')};
+var CAPS={orion:$('#cap-orion'),virgo:$('#cap-virgo'),canis:$('#cap-canis'),taurus:$('#cap-taurus'),bh:$('#cap-bh')};
 
 var PORTALS=[
  {id:'band',cons:'orion',stars:['mintaka','alnilam','alnitak'],from:'mintaka',hit:'alnilam',href:'dumul.html',title:'DUMUL',sub:'music \u00b7 Limerence album',col:'110,229,255',place:'fig-right'},
@@ -786,7 +809,8 @@ var TRIGGERS={
  rigel:{id:'rigel',cons:'orion',star:'rigel',rgb:'74,165,255'},
  spica:{id:'spica',cons:'virgo',star:'spica',rgb:'235,92,255'},
  sirius:{id:'sirius',cons:'canis',star:'sirius',rgb:'180,220,255'},
- pleione:{id:'pleione',cons:'pleiades',star:'Pleione',rgb:'145,170,255'}
+ pleione:{id:'pleione',cons:'pleiades',star:'Pleione',rgb:'145,170,255'},
+ aldebaran:{id:'aldebaran',cons:'taurus',star:'aldebaran',rgb:'255,160,90'}
 };
 
 /* ---------- PLEIADES: 7 bright + 2 dim, no imaginary lines ----------
@@ -997,9 +1021,10 @@ function layout(){
   var top=hb+10,bot=ft-8,ah=Math.max(120,bot-top),portrait=W<H*1.05;
   /* Canis Major: small + high, far from Gargantua to avoid lens stretch.
      Size kept comparable to Orion / Virgo. */
+  /* Taurus: mid-left lower (horns left, tail right) — Hyades LOCK coords scaled into box. */
   var boxes=portrait
-    ?{canis:[W*.04,top+ah*.20,W*.30,top+ah*.50],virgo:[W*.48,top+ah*.72,W*.76,bot-34],orion:[W*.38,top-ah*.02,W*.70,top+ah*.34]}
-    :{canis:[W*.05,top+ah*.17,W*.27,top+ah*.45],virgo:[W*.68,top+ah*.08,W*.97,bot-ah*.08],orion:[W*.39,top+ah*.05,W*.67,top+ah*.43]};
+    ?{canis:[W*.04,top+ah*.14,W*.28,top+ah*.40],virgo:[W*.52,top+ah*.72,W*.82,bot-34],orion:[W*.40,top-ah*.02,W*.72,top+ah*.32],taurus:[W*.02,top+ah*.48,W*.48,bot-28]}
+    :{canis:[W*.04,top+ah*.12,W*.24,top+ah*.40],virgo:[W*.72,top+ah*.08,W*.98,bot-ah*.10],orion:[W*.36,top+ah*.02,W*.62,top+ah*.38],taurus:[W*.02,top+ah*.48,W*.34,bot-ah*.04]};
   CONS.forEach(function(c){
     var b=boxes[c.id],bw=b[2]-b[0],bh=b[3]-b[1],sc=Math.min(bw/c.bw,bh/c.bh);
     var x0=b[0]+(bw-c.bw*sc)/2,y0=b[1]+(bh-c.bh*sc)/2;
@@ -1024,10 +1049,11 @@ function layout(){
   })();
   var clk=$('#bh-clock'),ft2=$('#footer').getBoundingClientRect();
   clk.style.transform='translate(calc(14px + env(safe-area-inset-left,0px)),'+Math.round(ft2.top-26)+'px)';
-  var o=cons('orion'),v=cons('virgo'),cm=cons('canis');
+  var o=cons('orion'),v=cons('virgo'),cm=cons('canis'),tau=cons('taurus');
   CAPS.orion.style.transform='translate('+Math.round((o.minX+o.maxX)/2-30)+'px,'+Math.round(o.maxY+22)+'px)';
   CAPS.virgo.style.transform='translate('+Math.round(v.maxX-42)+'px,'+Math.round(v.minY-24)+'px)';
   CAPS.canis.style.transform='translate('+Math.round((cm.minX+cm.maxX)/2-48)+'px,'+Math.round(cm.maxY+18)+'px)';
+  if(tau&&CAPS.taurus)CAPS.taurus.style.transform='translate('+Math.round((tau.minX+tau.maxX)/2-28)+'px,'+Math.round(tau.maxY+18)+'px)';
   BH.R=portrait?Math.min(30,W*.075):Math.min(38,ah*.075);
   BH.hx=W*.5;BH.hy=portrait?top+ah*.48:top+ah*.27;
   if(!drag.on){BH.x=BH.hx;BH.y=BH.hy;}
@@ -1042,6 +1068,11 @@ function layout(){
   var sr=cons('canis').stars.sirius,sfx=$('#sirius-fx');
   sfx.style.width=sfx.style.height='52px';sfx.style.marginLeft=sfx.style.marginTop='-26px';
   sfx.style.transform='translate('+Math.round(sr.x+skyPan.x)+'px,'+Math.round(sr.y+skyPan.y)+'px)';
+  var ad=cons('taurus')&&cons('taurus').stars.aldebaran,afx=$('#aldebaran-fx');
+  if(ad&&afx){
+    afx.style.width=afx.style.height='52px';afx.style.marginLeft=afx.style.marginTop='-26px';
+    afx.style.transform='translate('+Math.round(ad.x+skyPan.x)+'px,'+Math.round(ad.y+skyPan.y)+'px)';
+  }
   /* Dedicated DOM hit target for Pleione — same reliability as Rigel/Betel/Sirius. */
   var pfx=$('#pleione-fx');
   if(pfx&&PLEIADES.ready){
@@ -1870,7 +1901,7 @@ function drawStars(c,age,now){
   var focus=constellationFocus(c);
   Object.keys(c.stars).forEach(function(k){
     var s=c.stars[k],a=clamp((age-s.t0)/.5);s._a=a;if(a<=0)return;
-    var triggerKey=(k==='betel'?'betel':(k==='rigel'?'rigel':(k==='spica'?'spica':(k==='sirius'?'sirius':null))));
+    var triggerKey=(k==='betel'?'betel':(k==='rigel'?'rigel':(k==='spica'?'spica':(k==='sirius'?'sirius':(k==='aldebaran'?'aldebaran':null)))));
     var tr=triggerKey?TRIGGERS[triggerKey]:null;
     var isPlaying=!!(tr&&activeSfx===SFX[triggerKey]&&!SFX[triggerKey].paused);
     var cheap=audioFocus&&!isPlaying;
@@ -2409,7 +2440,7 @@ function updateHover(px,py){
       if(d<5&&d<best){best=d;hit={c:c,line:i};}
     });
   });
-  if(hit){hot=hit.star==='betel'?'betel':(hit.star==='rigel'?'rigel':(hit.star==='spica'?'spica':(hit.star==='sirius'?'sirius':hot)));if(hit.line!=null)hit.c._hot=hit.line;}
+  if(hit){hot=hit.star==='betel'?'betel':(hit.star==='rigel'?'rigel':(hit.star==='spica'?'spica':(hit.star==='sirius'?'sirius':(hit.star==='aldebaran'?'aldebaran':hot))));if(hit.line!=null)hit.c._hot=hit.line;}
   else if(hot!=='bh'&&hot!=='spica'&&hot!=='rigel'&&hot!=='betel'&&hot!=='sirius')hot=null;
 }
 document.addEventListener('pointerdown',function(e){
@@ -2433,6 +2464,7 @@ document.addEventListener('pointerdown',function(e){
     else if(hit.star==='rigel'){triggerSupernova('rigel');}
     else if(hit.star==='spica'){triggerSupernova('spica');}
     else if(hit.star==='sirius'){triggerSupernova('sirius');}
+    else if(hit.star==='aldebaran'){triggerSupernova('aldebaran');}
     else haptic(8);
   }
 },{passive:true});
@@ -2548,6 +2580,11 @@ function syncSkyPanHits(){
       var sfx=$('#sirius-fx'),p3=skyHitXY(cm.stars.sirius.x,cm.stars.sirius.y);
       if(sfx)sfx.style.transform='translate('+Math.round(p3[0])+'px,'+Math.round(p3[1])+'px)';
     }
+    var tau=cons('taurus');
+    if(tau&&tau.stars&&tau.stars.aldebaran){
+      var afx=$('#aldebaran-fx'),pAd=skyHitXY(tau.stars.aldebaran.x,tau.stars.aldebaran.y);
+      if(afx)afx.style.transform='translate('+Math.round(pAd[0])+'px,'+Math.round(pAd[1])+'px)';
+    }
     if(PLEIADES.ready){
       var pl=PLEIADES.bright.filter(function(z){return z.interactive;})[0];
       var pfx=$('#pleione-fx');
@@ -2658,6 +2695,12 @@ if(plFx){
   plFx.addEventListener('mouseenter',function(){hot='pleione';});
   plFx.addEventListener('mouseleave',function(){if(hot==='pleione')hot=null;});
   plFx.addEventListener('click',function(){if(!SW)triggerSupernova('pleione');});
+}
+var adFx=$('#aldebaran-fx');
+if(adFx){
+  adFx.addEventListener('mouseenter',function(){hot='aldebaran';});
+  adFx.addEventListener('mouseleave',function(){if(hot==='aldebaran')hot=null;});
+  adFx.addEventListener('click',function(){if(!SW)triggerSupernova('aldebaran');});
 }
 
 /* ---------- easter eggs ---------- */
@@ -2956,7 +2999,7 @@ window.addEventListener('pageshow',function(e){
     var rtM;window.addEventListener('resize',function(){clearTimeout(rtM);rtM=setTimeout(function(){if(matrixAlive)resizeMatrix();},150);});
   }
 
-  var stars=[SFX.betel,SFX.rigel,SFX.spica,SFX.sirius,SFX.pleione],t0=bootT0,done=false;
+  var stars=[SFX.betel,SFX.rigel,SFX.spica,SFX.sirius,SFX.pleione,SFX.aldebaran],t0=bootT0,done=false;
   var minMs=IS_POTATO?7000:4200;
   var maxMs=IS_POTATO?12000:8000;
   var choicesEl=document.getElementById('boot-choices');
