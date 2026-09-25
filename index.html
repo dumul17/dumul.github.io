@@ -661,7 +661,7 @@ function ensureAVProfile(){
   var N=avBarCount();
   if(AVP.N===N&&AVP.pts)return N;
   AVP.N=N;
-  AVP.pts=new Float32Array(N*5);
+  AVP.pts=new Float32Array(N*3);
   for(var j=0;j<N;j++){
     var ang=(j/N)*6.28318530718-Math.PI*.5;
     AVP.pts[j*3]=Math.cos(ang);
@@ -708,13 +708,10 @@ function drawAudioVisualizer(now,R){
        the Gargantua edge, so the spectrum became hard to read from a distance.
        Keep the renderer cheap, but give normal energy and especially transients
        substantially more radial travel. */
-    /* Half the previous radial travel in both normal and spike states. */
-    var ampBase=R*(.0375+.065*lv+.11*beat);
-    var ampSpec=R*(.11+.17*lv+.21*beat);
+    var ampBase=R*(.075+.13*lv+.22*beat);
+    var ampSpec=R*(.22+.34*lv+.42*beat);
 
-    /* One path = one Canvas stroke. Fake bars are interleaved with the real
-       spectrum bars: they use only cheap deterministic sine motion, never the
-       analyser/beat data, and are half the real bar length. */
+    /* One path = one Canvas stroke.  A single colour keeps compositing cheap. */
     g.save();
     g.globalCompositeOperation='lighter';
     g.strokeStyle='rgba('+AV_COLOR+','+Math.min(.92,.56+.25*lv+.28*beat)+')';
@@ -728,25 +725,14 @@ function drawAudioVisualizer(now,R){
          number of bars or doing another analyser pass. */
       fv=Math.min(1.12,Math.pow(fv,.72)*1.08);
       var rr=inner+ampBase+fv*ampSpec;
-      if(beat>.12)rr+=R*(.0275+.06*beat);
+      /* Beat transient is intentionally large and remains visible even when
+         the instantaneous FFT frame is a little soft. */
+      if(beat>.12)rr+=R*(.055+.12*beat);
       var x=pts[j*3]*inner;
       var y=pts[j*3+1]*inner;
       var x2=pts[j*3]*rr;
       var y2=pts[j*3+1]*rr;
       g.moveTo(x,y);g.lineTo(x2,y2);
-
-      /* Fake bar: same angular slot, halfway between real bars.  No FFT, no
-         beat coupling, no allocations; its motion is deterministic per bar. */
-      var fseed=(j*12.9898+78.233);
-      var fx=pts[N*3+j*2],fy=pts[N*3+j*2+1];
-      var fw=.5+.5*Math.sin(now*.0031+fseed);
-      fw=.32+.68*fw;
-      var frr=inner+(rr-inner)*.5*fw;
-      /* Reuse the same path; the fake bars stay subtly dim through their
-         shorter length, avoiding a second stroke/compositing pass. */
-      var fx0=fx*inner,fy0=fy*inner;
-      var fx1=fx*frr,fy1=fy*frr;
-      g.moveTo(fx0,fy0);g.lineTo(fx1,fy1);
     }
     g.stroke();
     g.restore();
