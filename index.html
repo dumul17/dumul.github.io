@@ -2688,7 +2688,7 @@ window.addEventListener('pageshow',function(e){
     var cx=cv.getContext('2d');
     mx.appendChild(cv);
     /* Depth layers: far (slow + faint) → mid → near (fast + bright).
-       More streams overall; deeper rain drifts slower and stays more transparent. */
+       Streams spawn already mid-fall so the first frame is a full rain field. */
     var cols=[],baseFont,dprM;
     var LAYERS=[
       {depth:0.22,speedMul:0.28,alphaMul:0.22,fontScale:0.62,countMul:1.55,blur:0},
@@ -2696,11 +2696,13 @@ window.addEventListener('pageshow',function(e){
       {depth:0.78,speedMul:0.88,alphaMul:0.82,fontScale:1.00,countMul:0.85,blur:10},
       {depth:1.00,speedMul:1.18,alphaMul:1.00,fontScale:1.12,countMul:0.55,blur:16}
     ];
-    function makeStream(layer,w,h){
+    function makeStream(layer,w,h,midway){
       var fs=Math.max(8,Math.round(baseFont*layer.fontScale));
       var spd=(IS_POTATO?0.38:0.52)+Math.random()*(IS_POTATO?0.55:0.85);
+      /* midway: scatter heads across the viewport instead of all above the top. */
+      var y0=midway?(Math.random()*h*1.15-h*0.15):(Math.random()*-h*1.2);
       return {
-        y:Math.random()*-h*1.2,
+        y:y0,
         speed:spd*layer.speedMul,
         len:8+((Math.random()*(IS_POTATO?14:22))|0),
         chars:[],
@@ -2724,7 +2726,7 @@ window.addEventListener('pageshow',function(e){
         var n=Math.max(6,Math.floor((w/(baseFont*L.fontScale))*L.countMul*(IS_POTATO?0.7:1)));
         if(IS_POTATO&&li===0)n=Math.min(n,18);
         for(var k=0;k<n;k++){
-          var s=makeStream(L,w,h);
+          var s=makeStream(L,w,h,true);
           while(s.chars.length<s.len)s.chars.push(randGlyph());
           cols.push(s);
         }
@@ -2750,7 +2752,8 @@ window.addEventListener('pageshow',function(e){
         c.tick++;
         if(c.tick%3===0&&c.chars.length){var ri=(Math.random()*c.chars.length)|0;c.chars[ri]=randGlyph();}
         if(c.y-c.len*fs>h){
-          c.y=Math.random()*-h*0.55;
+          /* Recycle from above the top (normal continuous rain). */
+          c.y=Math.random()*-h*0.4;
           c.x=Math.random()*w;
           c.speed=((IS_POTATO?0.38:0.52)+Math.random()*(IS_POTATO?0.55:0.85))*L.speedMul;
           c.len=8+((Math.random()*(IS_POTATO?14:22))|0);
