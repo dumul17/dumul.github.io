@@ -1041,18 +1041,21 @@ function pull(x,y){                       /* posisi benda saat disedot: berputar
 }
 function lens(x,y){                       /* smooth gravitational lens: bounded, continuous, no visual explosions */
   var R=BH.Rr;if(R<1)return [x,y];
-  var dx=x-BH.x,dy=y-BH.y,d=Math.sqrt(dx*dx+dy*dy)+.001;
-  var inner=R*1.08,outer=R*9.5;
-  if(d<inner)return null;
-  if(d>=outer)return [x,y];
+  var dx=x-BH.x,dy=y-BH.y,d2=dx*dx+dy*dy;
+  var inner=R*1.08,outer=R*9.5,i2=inner*inner,o2=outer*outer;
+  /* Far-field / swallowed checks use d² — skip sqrt for the majority of
+     background stars that sit outside the lens influence. */
+  if(d2<i2)return null;
+  if(d2>=o2)return [x,y];
 
+  var d=Math.sqrt(d2)+.001;
   var u=clamp((outer-d)/(outer-inner));
   /* Smooth falloff keeps the lens strong near the horizon but prevents the
      previous R²/d² singular jump that sent constellation lines off-screen. */
   var fall=u*u*(3-2*u);
   var wild=(drag.on&&drag.moved);
   var strength=wild?2.35:1.25;
-  var f=1+(R*R*strength)/(d*d);
+  var f=1+(R*R*strength)/d2;
   f=Math.min(f,wild?2.85:1.72);
   f=1+(f-1)*fall;
 
@@ -1535,9 +1538,24 @@ function drawFloatingTelescope(now){
 }
 
 function drawBg(now){
+  /* Twinkle half the field each frame (even/odd index by time) — cuts sin+fill
+     work ~50% with almost no visual difference on sparse background stars. */
+  var twPhase=(now/120|0)&1;
+  var R=BH.Rr,o2=(R*9.5)*(R*9.5);
   for(var i=0;i<BG.length;i++){
     var b=BG[i],x=b.x+mouse.x*b.d*14,y=b.y+mouse.y*b.d*10,k=0;
     if(SW){var q=pull(x,y);x=q[0];y=q[1];k=q[2];}
+    else{
+      /* Cheap far skip before lens(): most BG stars never enter the well. */
+      var dx=x-BH.x,dy=y-BH.y;
+      if(dx*dx+dy*dy>=o2){
+        var twF=reduce?1:((i&1)===twPhase?(.6+.4*Math.sin(now*.001*b.s+b.p)):b._tw||.8);
+        b._tw=twF;
+        g.fillStyle='rgba('+b.c+','+(b.a*twF)+')';
+        g.beginPath();g.arc(x,y,b.r,0,6.283);g.fill();
+        continue;
+      }
+    }
     var l=lens(x,y);if(!l)continue;
     var tw=reduce?1:(.6+.4*Math.sin(now*.001*b.s+b.p));
     g.fillStyle='rgba('+b.c+','+(b.a*tw*(1-.85*k))+')';
@@ -2199,19 +2217,21 @@ function triggerSupernova(key){
   flash.style.setProperty('--sn-rgb',tr.rgb);
   flash.classList.remove('on');void flash.offsetWidth;flash.classList.add('on');
 
-  /* Same supernova language for all three trigger stars; only the color differs. */
+  /* Same supernova language for all trigger stars; only the color differs.
+     Counts drop further when the scene is already busy (star SFX / drag). */
   var t0=performance.now();
-  var count=IS_POTATO?8:22;
-  /* Hard safety net: whatever else is going on, PU can never grow past a
-     sane size. Oldest particles are dropped first so the scene keeps moving
-     instead of accumulating work forever. */
-  if(PU.length+count>80)PU.splice(0,Math.max(0,PU.length+count-80));
+  var busy=!!(drag.on||(activeSfx&&!activeSfx.paused&&!activeSfx.ended));
+  var count=IS_POTATO?(busy?5:7):(busy?10:16);
+  var puCap=IS_POTATO?36:56;
+  /* Hard safety net: oldest particles drop first so work never accumulates. */
+  if(PU.length+count>puCap)PU.splice(0,Math.max(0,PU.length+count-puCap));
   for(var i=0;i<count;i++){
-    var a=Math.random()*6.283,sp=38+Math.random()*105;
-    PU.push({c:c,a:tr.star,b:tr.star,t:t0,d:760+Math.random()*180,shock:true,snKey:key,ang:a,sp:sp,i:i});
+    var a=Math.random()*6.283,sp=38+Math.random()*(busy?80:105);
+    PU.push({c:c,a:tr.star,b:tr.star,t:t0,d:640+Math.random()*160,shock:true,snKey:key,ang:a,sp:sp,i:i});
   }
-  /* A short luminous core burst makes Rigel/Spica feel like the same event as Betelgeuse. */
-  SN_BURSTS.push({key:key,t:t0,d:760});
+  /* One core burst at a time — stacking SN_BURSTS was pure overdraw. */
+  if(SN_BURSTS.length>=1)SN_BURSTS.length=0;
+  SN_BURSTS.push({key:key,t:t0,d:busy?620:760});
 }
 var SN_BURSTS=[];
 function drawSupernovaBursts(now){
