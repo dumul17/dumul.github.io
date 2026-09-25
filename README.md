@@ -44,7 +44,7 @@ Entry is the Observatory. The **DUMUL** portal (and Gargantua swallow) leads int
 ```text
 .
 ├── index.html          # Observatory (entry)
-├── dumul.html          # Band page
+├── dumul.html          # Album page
 ├── README.md
 │
 ├── # Star SFX (Observatory)
