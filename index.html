@@ -2518,7 +2518,7 @@ function constellationTargetAt(x,y){
       /* skyXF first (mobile 2-finger rotate), then the gravity lens - same
          order drawStars() uses via gSky - or this misses every star once
          the sky has been rotated. */
-      var s=c.stars[k],t=skyXF(s.x+c.ox,s.y+c.oy),q=lens(t[0],t[1]);
+      var s=c.stars[k],q=gSky(s.x+c.ox,s.y+c.oy);
       if(!q)return;
       var d=Math.hypot(x-q[0],y-q[1]);
       if(d<Math.max(14,s.r*4.5))found=true;
