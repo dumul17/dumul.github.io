@@ -499,12 +499,16 @@ function haptic(ms){
 function showSecret(text,ms){
   var el=$('#secret-msg');if(!el)return;
   clearTimeout(el._t);clearTimeout(el._type);
+  el.dataset.type='center'; /* Konami / centered overlay — do not follow telescope */
+  el.style.left='';
+  el.style.top='';
   el.textContent=text;el.classList.add('on');
   el._t=setTimeout(function(){el.classList.remove('on');},ms||2000);
 }
 function showSecretSequence(){
   var el=$('#secret-msg');if(!el)return;
   clearTimeout(el._t);clearTimeout(el._type);
+  el.dataset.type='telescope'; /* Telescope voice — track with placeSecretMsg each frame */
   el.classList.add('on');el.textContent='';
   placeSecretMsg();
   var first='Hello, I love You...',finalText='Hello, Friend...';
@@ -1168,7 +1172,7 @@ function fitTitle(){
 /* ---------- layout ---------- */
 var BG=[],SS=[],PU=[],AST=[],GAL=[],nextSS=0,nextPU=0,bgW=0,bgH=0;
 var bgCanvas=null,bgCtx=null,bgDirty=true;
-var TELESCOPE={phase:1.7,init:false,x:0,y:0,vx:0,vy:0,tx:0,ty:0,ang:0,va:0,next:0};
+var TELESCOPE={phase:1.7,init:false,x:0,y:0,vx:0,vy:0,tx:0,ty:0,ang:0,va:0,next:0,mode:'drift',targetX:0,targetY:0,orbitAngle:0,onWarpComplete:null};
 function layout(){
   if(SW)return;
   W=innerWidth;H=innerHeight;DPR=IS_POTATO?1:Math.min(window.devicePixelRatio||1,2);
@@ -1819,44 +1823,97 @@ function drawDistantGalaxies(now){
   }
 }
 function drawFloatingTelescope(now){
-  /* Free-floating telescope: slow inertial drift, random heading changes,
-     seamless edge wrapping, and the SAME gravity pull used by the debris. */
+  /* Free-floating telescope: drift / warp / orbit state machine.
+     Warp + orbit triggered by star supernova; otherwise inertial drift. */
   if(!TELESCOPE.init){
     TELESCOPE.init=true;
-    TELESCOPE.x=W*(.18+Math.random()*.64);
-    TELESCOPE.y=H*(.16+Math.random()*.62);
-    TELESCOPE.vx=(Math.random()<.5?-1:1)*(5+Math.random()*8);
-    TELESCOPE.vy=(Math.random()<.5?-1:1)*(2+Math.random()*6);
-    TELESCOPE.tx=TELESCOPE.vx;TELESCOPE.ty=TELESCOPE.vy;
-    TELESCOPE.ang=Math.random()*6.283;
-    TELESCOPE.va=(Math.random()-.5)*.012;
-    TELESCOPE.next=now+9000+Math.random()*11000;
+    /* Only seed free-float pose when not already warping (e.g. star tapped before first draw). */
+    if(TELESCOPE.mode!=='warp'&&TELESCOPE.mode!=='orbit'){
+      TELESCOPE.x=W*(.18+Math.random()*.64);
+      TELESCOPE.y=H*(.16+Math.random()*.62);
+      TELESCOPE.vx=(Math.random()<.5?-1:1)*(5+Math.random()*8);
+      TELESCOPE.vy=(Math.random()<.5?-1:1)*(2+Math.random()*6);
+      TELESCOPE.tx=TELESCOPE.vx;TELESCOPE.ty=TELESCOPE.vy;
+      TELESCOPE.ang=Math.random()*6.283;
+      TELESCOPE.va=(Math.random()-.5)*.012;
+      TELESCOPE.next=now+9000+Math.random()*11000;
+      TELESCOPE.mode='drift';
+    }else if(!TELESCOPE.x&&!TELESCOPE.y){
+      /* Warp requested before layout: seed a start point so glide has somewhere to leave from. */
+      TELESCOPE.x=W*(.18+Math.random()*.64);
+      TELESCOPE.y=H*(.16+Math.random()*.62);
+      TELESCOPE.ang=Math.random()*6.283;
+      TELESCOPE.va=0;
+      TELESCOPE.next=now+9000+Math.random()*11000;
+    }
   }
   var dt=Math.min(40,Math.max(0,now-(TELESCOPE.last||now)))/1000;
   TELESCOPE.last=now;
 
-  if(now>TELESCOPE.next){
-    var a=Math.random()*6.283,sp=5+Math.random()*9;
-    TELESCOPE.tx=Math.cos(a)*sp;
-    TELESCOPE.ty=Math.sin(a)*sp*.72;
-    TELESCOPE.va+=(Math.random()-.5)*.004;
-    TELESCOPE.va=clamp(TELESCOPE.va,-.018,.018);
-    TELESCOPE.next=now+9000+Math.random()*11000;
+  /* --- Movement logic by mode --- */
+  if(TELESCOPE.mode==='warp'){
+    /* Fast glide toward the target star */
+    var dx=TELESCOPE.targetX-TELESCOPE.x;
+    var dy=TELESCOPE.targetY-TELESCOPE.y;
+    var dist=Math.hypot(dx,dy);
+
+    TELESCOPE.x+=dx*Math.min(1,dt*7.5);
+    TELESCOPE.y+=dy*Math.min(1,dt*7.5);
+    TELESCOPE.ang+=dt*5.0; /* Spin while warping */
+
+    /* Arrived near the star (< 25px) */
+    if(dist<25){
+      TELESCOPE.mode='orbit';
+      TELESCOPE.orbitAngle=Math.atan2(dy,dx);
+      if(typeof TELESCOPE.onWarpComplete==='function'){
+        TELESCOPE.onWarpComplete();
+        TELESCOPE.onWarpComplete=null;
+      }
+    }
+  }else if(TELESCOPE.mode==='orbit'){
+    /* Stay in orbit while SFX is still playing */
+    var sfxActive=activeSfx&&!activeSfx.paused&&!activeSfx.ended;
+    if(!sfxActive){
+      /* SFX finished/paused → free drift again */
+      TELESCOPE.mode='drift';
+      TELESCOPE.vx=(Math.random()<.5?-1:1)*8;
+      TELESCOPE.vy=(Math.random()<.5?-1:1)*6;
+      TELESCOPE.tx=TELESCOPE.vx;
+      TELESCOPE.ty=TELESCOPE.vy;
+    }else{
+      /* Orbit the active star */
+      TELESCOPE.orbitAngle+=dt*1.2;
+      var orbitRadius=38;
+      TELESCOPE.x=TELESCOPE.targetX+Math.cos(TELESCOPE.orbitAngle)*orbitRadius;
+      TELESCOPE.y=TELESCOPE.targetY+Math.sin(TELESCOPE.orbitAngle)*orbitRadius;
+      TELESCOPE.ang=TELESCOPE.orbitAngle+Math.PI/2; /* Face tangent to orbit */
+    }
+  }else{
+    /* Mode 'drift' — original free-float motion */
+    if(now>TELESCOPE.next){
+      var a=Math.random()*6.283,sp=5+Math.random()*9;
+      TELESCOPE.tx=Math.cos(a)*sp;
+      TELESCOPE.ty=Math.sin(a)*sp*.72;
+      TELESCOPE.va+=(Math.random()-.5)*.004;
+      TELESCOPE.va=clamp(TELESCOPE.va,-.018,.018);
+      TELESCOPE.next=now+9000+Math.random()*11000;
+    }
+    var ease=Math.min(1,dt*.055);
+    TELESCOPE.vx+=(TELESCOPE.tx-TELESCOPE.vx)*ease;
+    TELESCOPE.vy+=(TELESCOPE.ty-TELESCOPE.vy)*ease;
+    TELESCOPE.x+=TELESCOPE.vx*dt;
+    TELESCOPE.y+=TELESCOPE.vy*dt;
+    TELESCOPE.ang+=TELESCOPE.va*dt;
+
+    /* Toroidal wrap: the same object re-enters from the opposite edge. */
+    if(TELESCOPE.x<-110)TELESCOPE.x=W+110;
+    else if(TELESCOPE.x>W+110)TELESCOPE.x=-110;
+    if(TELESCOPE.y<-110)TELESCOPE.y=H+110;
+    else if(TELESCOPE.y>H+110)TELESCOPE.y=-110;
   }
-  var ease=Math.min(1,dt*.055);
-  TELESCOPE.vx+=(TELESCOPE.tx-TELESCOPE.vx)*ease;
-  TELESCOPE.vy+=(TELESCOPE.ty-TELESCOPE.vy)*ease;
-  TELESCOPE.x+=TELESCOPE.vx*dt;
-  TELESCOPE.y+=TELESCOPE.vy*dt;
-  TELESCOPE.ang+=TELESCOPE.va*dt;
 
-  /* Toroidal wrap: the same object re-enters from the opposite edge. */
+  /* margin used by edge-wrap ghost copies during draw (all modes). */
   var margin=110;
-  if(TELESCOPE.x<-margin)TELESCOPE.x=W+margin;
-  else if(TELESCOPE.x>W+margin)TELESCOPE.x=-margin;
-  if(TELESCOPE.y<-margin)TELESCOPE.y=H+margin;
-  else if(TELESCOPE.y>H+margin)TELESCOPE.y=-margin;
-
   var lensD=Math.hypot(TELESCOPE.x-BH.x,TELESCOPE.y-BH.y);
   var lensMag=1+0.16*clamp((BH.Rr*8-lensD)/(BH.Rr*8),0,1);
   var sc=Math.max(.18,Math.min(.24,W/600))*lensMag;
@@ -2399,15 +2456,16 @@ function pleiadesHitAt(px,py){
 }
 function telescopeScreenPos(){
   var q=lens(TELESCOPE.x,TELESCOPE.y);
-  return q ? [q[0],q[1]] : [TELESCOPE.x,TELESCOPE.y];
+  /* If heavily distorted by the lens/horizon, still return the physical telescope pos. */
+  if(!q)return [TELESCOPE.x,TELESCOPE.y];
+  return [q[0],q[1]];
 }
 function placeSecretMsg(){
   var el=$('#secret-msg'),p=telescopeScreenPos();
   if(!el||!p)return;
-  /* Put the tiny message just above the telescope, as if the voice is coming
-     from inside its optical tube. */
+  /* Position the message just above the telescope (24px offset upward). */
   el.style.left=Math.round(p[0])+'px';
-  el.style.top=Math.round(p[1]-12)+'px';
+  el.style.top=Math.round(p[1]-24)+'px';
 }
 function drawPulses(now,age){
   if(reduce||IS_POTATO||age<4||SW)return;
@@ -2525,7 +2583,8 @@ function frame(now){
     g.clearRect(0,0,W,H);
     if(bgCanvas)g.drawImage(bgCanvas,0,0,W,H);
     drawFloatingTelescope(now);
-    if($('#secret-msg').classList.contains('on'))placeSecretMsg();
+    var msgEl=$('#secret-msg');
+    if(msgEl&&msgEl.classList.contains('on')&&msgEl.dataset.type==='telescope')placeSecretMsg();
     drawShooting(now);
     CONS.forEach(function(c){drawCons(c,age,now);});
     drawPulses(now,age);
@@ -2806,26 +2865,28 @@ var SN_COOLDOWN={};
 
 function triggerSupernova(key){
   if(SW)return;
-  var tr=TRIGGERS[key],c=tr&&tr.cons==='pleiades'?PLEIADES:(tr&&cons(tr.cons)),s=tr&&c&&(tr.cons==='pleiades'?PLEIADES.bright.filter(function(z){return z.name===tr.star;})[0]:c.stars[tr.star]);
+  var tr=TRIGGERS[key],
+      c=tr&&tr.cons==='pleiades'?PLEIADES:(tr&&cons(tr.cons)),
+      s=tr&&c&&(tr.cons==='pleiades'?PLEIADES.bright.filter(function(z){return z.name===tr.star;})[0]:c.stars[tr.star]);
   if(!tr||!s)return;
-  playSfx(SFX[key]);haptic(key==='betel'?20:18);
-  /* A burst is a one-shot visual event, not tied to play/pause. Rapid or
-     accidental double-taps on the same star must NOT stack more bursts on
-     top of one still running - that pile-up (more particles every tap,
-     every frame, on top of everything else already drawing) is the most
-     likely cause of a real freeze on a phone. */
+
+  /* Cooldown before any visual/audio so rapid double-taps don't stack. */
   var t0g=performance.now();
   if(SN_COOLDOWN[key]&&t0g-SN_COOLDOWN[key]<820)return;
   SN_COOLDOWN[key]=t0g;
-  var flash=$('#sn-flash'),sx=tr.cons==='pleiades'?(PLEIADES.x+s.x*PLEIADES.scale+mouse.x*1.4+skyPan.x):(s.x+c.ox),sy=tr.cons==='pleiades'?(PLEIADES.y+s.y*PLEIADES.scale+mouse.y*1.0+skyPan.y):(s.y+c.oy),q=gSky(sx,sy);
+
+  var flash=$('#sn-flash'),
+      sx=tr.cons==='pleiades'?(PLEIADES.x+s.x*PLEIADES.scale+mouse.x*1.4+skyPan.x):(s.x+c.ox),
+      sy=tr.cons==='pleiades'?(PLEIADES.y+s.y*PLEIADES.scale+mouse.y*1.0+skyPan.y):(s.y+c.oy),
+      q=gSky(sx,sy);
   if(!q||q[2]>=1)return;
+
+  /* 1. Supernova flash & particle burst */
   flash.style.setProperty('--sx',Math.round(q[0])+'px');
   flash.style.setProperty('--sy',Math.round(q[1])+'px');
   flash.style.setProperty('--sn-rgb',tr.rgb);
   flash.classList.remove('on');void flash.offsetWidth;flash.classList.add('on');
 
-  /* Same supernova language for all trigger stars; only the color differs.
-     Counts drop further when the scene is already busy (star SFX / drag). */
   var t0=performance.now();
   var busy=!!(drag.on||(activeSfx&&!activeSfx.paused&&!activeSfx.ended));
   var count=IS_POTATO?(busy?5:7):(busy?10:16);
@@ -2839,6 +2900,15 @@ function triggerSupernova(key){
   /* One core burst at a time — stacking SN_BURSTS was pure overdraw. */
   if(SN_BURSTS.length>=1)SN_BURSTS.length=0;
   SN_BURSTS.push({key:key,t:t0,d:busy?620:760});
+
+  /* 2. Warp telescope to the star; SFX + haptic fire on arrival. */
+  TELESCOPE.mode='warp';
+  TELESCOPE.targetX=sx;
+  TELESCOPE.targetY=sy;
+  TELESCOPE.onWarpComplete=function(){
+    playSfx(SFX[key]);
+    haptic(key==='betel'?20:18);
+  };
 }
 var SN_BURSTS=[];
 function drawSupernovaBursts(now){
