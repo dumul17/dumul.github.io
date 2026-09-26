@@ -64,6 +64,10 @@ h1.gl .kicker{animation:gk .65s steps(1,end)}
 #mp-now-playing{position:fixed;right:50px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:6;height:32px;display:flex;align-items:center;max-width:min(160px,calc(100vw - 72px));padding:0 10px;border:1px solid rgba(110,229,255,.22);border-radius:5px;background:rgba(3,8,13,.82);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 0 12px rgba(110,229,255,.08);font:500 9px/1 'Courier New',monospace;letter-spacing:.06em;color:#dff7ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;transform:translateX(10px) scale(.96);pointer-events:none;visibility:hidden;transition:opacity .38s ease,transform .42s cubic-bezier(.22,.7,.3,1),visibility 0s linear .42s}
 #mp-now-playing.show{opacity:1;transform:none;visibility:visible;transition:opacity .38s ease,transform .42s cubic-bezier(.22,.7,.3,1),visibility 0s}
 #mp-now-playing.absorb{opacity:0;transform:translateX(28px) scale(.55);visibility:hidden;transition:opacity .55s ease,transform .6s cubic-bezier(.4,0,.2,1),visibility 0s linear .55s}
+.mp-section-title{font-size:7.5px;line-height:1;text-transform:uppercase;letter-spacing:.18em;color:rgba(110,229,255,.65);margin:10px 0 4px 2px;font-weight:600}.mp-section-title:first-of-type{margin-top:2px}
+#music-player{max-height:calc(100vh - 75px);overflow-y:auto;will-change:transform}
+#music-player::-webkit-scrollbar{width:3px}
+#music-player::-webkit-scrollbar-thumb{background:rgba(110,229,255,.3);border-radius:2px}
 @media (prefers-reduced-motion:reduce){
   .mp-track,.mp-spec,.mp-spec i,.mp-state,.mp-play,#music-close,#music-toggle,#music-toggle svg,.mp-spec-mini,.mp-spec-mini i,#mp-now-playing{transition-duration:.01s!important}
 }
@@ -372,10 +376,20 @@ body.konami #sky{animation:cyberGlitch .55s steps(2,end) 3}
 <button id="aldebaran-fx" type="button" class="hit" aria-label="Putar suara Aldebaran"></button>
 <div id="veil" aria-hidden="true"></div>
 <section id="music-player" aria-label="Music player" aria-hidden="true">
-  <div class="mp-head"><div><span class="mp-kicker">Dumul's Observatory</span><strong>Music</strong></div><button id="music-close" type="button" aria-label="Tutup music player">×</button></div>
+  <div class="mp-head"><div><span class="mp-kicker">Dumul's Observatory</span><strong>Music Transmission</strong></div><button id="music-close" type="button" aria-label="Tutup music player">×</button></div>
+  <div class="mp-section-title">Stellar Signals</div>
   <div class="mp-tracks">
-    <button class="mp-track active" type="button" data-track="0"><span class="mp-num">01</span><span class="mp-name">constellation</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
-    <button class="mp-track" type="button" data-track="1"><span class="mp-num">02</span><span class="mp-name">collapsars</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
+    <button class="mp-track" type="button" data-type="sfx" data-key="aldebaran"><span class="mp-num">01</span><span class="mp-name">aldebaran</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
+    <button class="mp-track" type="button" data-type="sfx" data-key="betel"><span class="mp-num">02</span><span class="mp-name">betelgeuse</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
+    <button class="mp-track" type="button" data-type="sfx" data-key="pleione"><span class="mp-num">03</span><span class="mp-name">pleione</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
+    <button class="mp-track" type="button" data-type="sfx" data-key="rigel"><span class="mp-num">04</span><span class="mp-name">rigel</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
+    <button class="mp-track" type="button" data-type="sfx" data-key="spica"><span class="mp-num">05</span><span class="mp-name">spica</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
+    <button class="mp-track" type="button" data-type="sfx" data-key="sirius"><span class="mp-num">06</span><span class="mp-name">sirius</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
+  </div>
+  <div class="mp-section-title">Observatory BGM</div>
+  <div class="mp-tracks">
+    <button class="mp-track active" type="button" data-type="bgm" data-index="0"><span class="mp-num">01</span><span class="mp-name">constellation</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
+    <button class="mp-track" type="button" data-type="bgm" data-index="1"><span class="mp-num">02</span><span class="mp-name">collapsars</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
   </div>
   <button id="music-play" class="mp-play" type="button" aria-label="Play music"><span class="mp-play-icon" aria-hidden="true">▶</span><span class="mp-play-label">Play</span></button>
 </section>
@@ -2572,20 +2586,45 @@ var SN_COOLDOWN={};
   var panel=$('#music-player'),toggle=$('#music-toggle'),close=$('#music-close'),playBtn=$('#music-play');
   var nowEl=$('#mp-now-playing');
   if(!panel||!toggle||!close||!playBtn)return;
-  var tracks=[AMB,MUSIC_COLLAP];
+
+  /* Unified track list: the 6 Stellar Signals (star SFX, wired through
+     triggerSupernova so the HUD row does the exact same thing as tapping
+     the star on the canvas) plus the 2 Observatory BGM loops. Order must
+     match the HTML rows (sfx rows first, then bgm rows). */
+  var tracks=[
+    {type:'sfx',key:'aldebaran',name:'aldebaran',audio:SFX.aldebaran},
+    {type:'sfx',key:'betel',name:'betelgeuse',audio:SFX.betel},
+    {type:'sfx',key:'pleione',name:'pleione',audio:SFX.pleione},
+    {type:'sfx',key:'rigel',name:'rigel',audio:SFX.rigel},
+    {type:'sfx',key:'spica',name:'spica',audio:SFX.spica},
+    {type:'sfx',key:'sirius',name:'sirius',audio:SFX.sirius},
+    {type:'bgm',index:0,name:'constellation',audio:AMB},
+    {type:'bgm',index:1,name:'collapsars',audio:MUSIC_COLLAP}
+  ];
+
   var rows=[].slice.call(panel.querySelectorAll('.mp-track'));
-  var trackNames=rows.map(function(row){var n=row.querySelector('.mp-name');return n?n.textContent.trim():'';});
-  var idx=0;
+  var trackNames=tracks.map(function(t){return t.name;});
+  var activeIdx=6; /* default highlighted row: Constellation BGM */
   var specRAF=0;
   var nowTimer=0;
   var nowPhase=''; /* '' | 'show' | 'absorb' */
   var rowSpecs=rows.map(function(row){return [].slice.call(row.querySelectorAll('.mp-spec i'));});
   var miniBars=[].slice.call(toggle.querySelectorAll('.mp-spec-mini i'));
-  function current(){return tracks[idx];}
-  function isPlaying(){return !!(current()&&!current().paused&&!current().ended);}
+
+  /* Whatever is actually making sound right now — a star SFX started from
+     the HUD, from a canvas hit, or a BGM loop — not just whatever the HUD
+     last selected. Keeps the panel truthful no matter which control fired. */
+  function getPlayingTrackIndex(){
+    for(var i=0;i<tracks.length;i++){
+      var a=tracks[i].audio;
+      if(a&&!a.paused&&!a.ended)return i;
+    }
+    return -1;
+  }
+  function isPlaying(){return getPlayingTrackIndex()!==-1;}
   function panelOpen(){return panel.classList.contains('open');}
-  function stopOther(){
-    for(var i=0;i<tracks.length;i++)if(i!==idx)safePause(tracks[i]);
+  function stopAllExcept(keepAudio){
+    tracks.forEach(function(t){if(t.audio&&t.audio!==keepAudio)safePause(t.audio);});
   }
   function clearNowPlaying(){
     if(nowTimer){clearTimeout(nowTimer);nowTimer=0;}
@@ -2594,7 +2633,9 @@ var SN_COOLDOWN={};
   }
   function showNowPlaying(){
     if(!nowEl)return;
-    var name=trackNames[idx]||'';
+    var playingIdx=getPlayingTrackIndex();
+    if(playingIdx===-1)return;
+    var name=trackNames[playingIdx]||'';
     if(!name)return;
     /* Reset if track changed while already showing. */
     if(nowPhase==='show'&&nowEl.textContent===name)return;
@@ -2614,11 +2655,13 @@ var SN_COOLDOWN={};
     },2000);
   }
   function sync(){
-    var playing=isPlaying();
+    var playingIdx=getPlayingTrackIndex();
+    var playing=(playingIdx!==-1);
     var open=panelOpen();
+    if(playingIdx!==-1)activeIdx=playingIdx;
     rows.forEach(function(row,i){
-      row.classList.toggle('active',i===idx);
-      row.classList.toggle('playing',i===idx&&playing);
+      row.classList.toggle('active',i===activeIdx);
+      row.classList.toggle('playing',i===playingIdx);
     });
     /* Spectrum lives next to the track title while the HUD is open;
        when closed it relocates into the music logo. */
@@ -2634,7 +2677,7 @@ var SN_COOLDOWN={};
   function pulseBars(bars,now,minH,maxH){
     if(!bars||!bars.length)return;
     for(var i=0;i<bars.length;i++){
-      var wave=.5+.5*Math.sin(now*.0085+i*1.21+idx*2.4);
+      var wave=.5+.5*Math.sin(now*.0085+i*1.21+activeIdx*2.4);
       var center=1-Math.abs((i-(bars.length-1)/2)/Math.max(1,(bars.length-1)/2));
       var h=minH+(maxH-minH)*wave*(.32+.68*center);
       bars[i].style.height=h.toFixed(1)+'px';
@@ -2642,10 +2685,11 @@ var SN_COOLDOWN={};
   }
   function tickSpec(now){
     specRAF=0;
-    if(!isPlaying()){stopSpec();return;}
+    var playingIdx=getPlayingTrackIndex();
+    if(playingIdx===-1){stopSpec();return;}
     var open=panelOpen();
     if(open){
-      pulseBars(rowSpecs[idx],now,2.2,11);
+      pulseBars(rowSpecs[playingIdx],now,2.2,11);
     }else{
       pulseBars(miniBars,now,3,13);
     }
@@ -2660,8 +2704,9 @@ var SN_COOLDOWN={};
     rowSpecs.forEach(function(bars){bars.forEach(function(b){b.style.height='3px';});});
     miniBars.forEach(function(b){b.style.height='4px';});
   }
-  /* Called from playSfx when a star takes over — kills spectrum RAF and
-     clears playing UI without waiting for the audio 'pause' event. */
+  /* Called from playSfx (pauseMusicForSfx) the instant a star SFX takes
+     over — clears playing UI immediately without waiting for the BGM's
+     'pause' event, so the HUD never flashes a stale state. */
   musicForceStop=function(){
     stopSpec();
     toggle.classList.remove('playing-closed');
@@ -2670,44 +2715,77 @@ var SN_COOLDOWN={};
     playBtn.innerHTML='<span class="mp-play-icon" aria-hidden="true">▶</span><span class="mp-play-label">Play</span>';
     clearNowPlaying();
   };
-  function open(){
+  function openPanel(){
     panel.classList.add('open');panel.setAttribute('aria-hidden','false');toggle.setAttribute('aria-expanded','true');
     sync();
   }
-  function shut(){
+  function shutPanel(){
     panel.classList.remove('open');panel.setAttribute('aria-hidden','true');toggle.setAttribute('aria-expanded','false');
     sync();
   }
-  function select(i){
-    var was=isPlaying();
-    safePause(tracks[idx]);
-    idx=i;
-    stopOther();
-    if(was)start();else sync();
-  }
-  function start(){
-    /* User-controlled music is mutually exclusive with a star SFX. */
-    if(activeSfx&&!activeSfx.paused&&!activeSfx.ended){
-      safePause(activeSfx);
-      audioVizOff();
-      setAVColor(null,false);
+  function selectAndPlay(i){
+    var target=tracks[i];
+    if(!target)return;
+    var playingIdx=getPlayingTrackIndex();
+
+    /* Tapping the row that's already playing pauses it (toggle). */
+    if(playingIdx===i){
+      if(target.type==='sfx'){safePause(target.audio);audioVizOff();setAVColor(null,false);}
+      else safePause(target.audio);
+      sync();
+      return;
     }
-    stopOther();
-    var a=current();a.volume=.5;safePlay(a);sync();
+
+    activeIdx=i;
+    stopAllExcept(null);
+
+    if(target.type==='sfx'){
+      /* Same path as clicking the star on the canvas: spectrum, star
+         focus/twinkle, supernova burst & flash, HUD equalizer — all of it
+         is already handled inside triggerSupernova. Guarded internally
+         against the black-hole swallow state (SW). */
+      triggerSupernova(target.key);
+    }else{
+      if(activeSfx&&!activeSfx.paused&&!activeSfx.ended){
+        safePause(activeSfx);
+        audioVizOff();
+        setAVColor(null,false);
+      }
+      target.audio.volume=.5;
+      safePlay(target.audio);
+    }
+    sync();
   }
-  function pause(){safePause(current());sync();}
-  toggle.addEventListener('click',function(){panel.classList.contains('open')?shut():open();});
-  close.addEventListener('click',shut);
+  function toggleCurrentPlay(){
+    var playingIdx=getPlayingTrackIndex();
+    if(playingIdx!==-1){
+      var t=tracks[playingIdx];
+      if(t.type==='sfx'){safePause(t.audio);audioVizOff();setAVColor(null,false);}
+      else safePause(t.audio);
+      sync();
+    }else{
+      selectAndPlay(activeIdx);
+    }
+  }
+  toggle.addEventListener('click',function(){panel.classList.contains('open')?shutPanel():openPanel();});
+  close.addEventListener('click',shutPanel);
   /* Dismiss the HUD when tapping/clicking anywhere outside it. */
   document.addEventListener('pointerdown',function(e){
     if(!panel.classList.contains('open'))return;
     var target=e.target;
     if(panel.contains(target)||toggle.contains(target))return;
-    shut();
+    shutPanel();
   },true);
-  playBtn.addEventListener('click',function(){isPlaying()?pause():start();});
-  rows.forEach(function(row,i){row.addEventListener('click',function(){select(i);});});
-  tracks.forEach(function(a){a.addEventListener('play',sync);a.addEventListener('pause',sync);a.addEventListener('ended',sync);});
+  playBtn.addEventListener('click',toggleCurrentPlay);
+  rows.forEach(function(row,i){row.addEventListener('click',function(){selectAndPlay(i);});});
+  /* Stars can also start/stop via canvas hits, so listen on every track's
+     own audio element (not just the two BGM loops) to stay in sync. */
+  tracks.forEach(function(t){
+    if(!t.audio)return;
+    t.audio.addEventListener('play',sync);
+    t.audio.addEventListener('pause',sync);
+    t.audio.addEventListener('ended',sync);
+  });
   sync();
 })();
 
