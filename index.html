@@ -50,7 +50,7 @@ h1.gl .kicker{animation:gk .65s steps(1,end)}
 100%{transform:none}}
 @keyframes gk{0%{transform:translateX(4px);color:#ff7ad9}30%{transform:translateX(-4px);color:#6ee5ff}60%{transform:translateX(3px);color:#ff7ad9}100%{transform:none}}
 #music-player{position:fixed;right:12px;bottom:58px;z-index:12;width:min(258px,calc(100vw - 34px));padding:10px;border:1px solid rgba(110,229,255,.24);border-radius:8px;background:rgba(3,8,13,.88);box-shadow:0 10px 28px rgba(0,0,0,.34),0 0 18px rgba(110,229,255,.06);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);opacity:0;transform:translateY(8px) scale(.98);pointer-events:none;transition:opacity .28s ease,transform .28s cubic-bezier(.22,.7,.3,1)}
-#music-player.open{opacity:1;transform:none;pointer-events:auto}
+#music-player.open{opacity:1;transform:none;pointer-events:auto;will-change:transform,opacity}
 .mp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .mp-kicker{display:block;font-size:6.5px;line-height:1;text-transform:uppercase;letter-spacing:.2em;color:rgba(184,198,214,.4);margin-bottom:3px}.mp-head strong{font:600 12px/1 'Syne',sans-serif;letter-spacing:.04em;color:#dff7ff}
 #music-close{width:24px;height:24px;border:1px solid rgba(110,229,255,.12);border-radius:4px;background:rgba(110,229,255,.035);color:rgba(214,228,240,.65);font:300 17px/1 system-ui;cursor:pointer;transition:border-color .25s ease,background .25s ease,color .25s ease,transform .15s ease}
@@ -65,7 +65,7 @@ h1.gl .kicker{animation:gk .65s steps(1,end)}
 #mp-now-playing.show{opacity:1;transform:none;visibility:visible;transition:opacity .38s ease,transform .42s cubic-bezier(.22,.7,.3,1),visibility 0s}
 #mp-now-playing.absorb{opacity:0;transform:translateX(28px) scale(.55);visibility:hidden;transition:opacity .55s ease,transform .6s cubic-bezier(.4,0,.2,1),visibility 0s linear .55s}
 .mp-section-title{font-size:7.5px;line-height:1;text-transform:uppercase;letter-spacing:.18em;color:rgba(110,229,255,.65);margin:10px 0 4px 2px;font-weight:600}.mp-section-title:first-of-type{margin-top:2px}
-#music-player{max-height:calc(100vh - 75px);overflow-y:auto;will-change:transform}
+#music-player{max-height:calc(100vh - 75px);overflow-y:auto}
 #music-player::-webkit-scrollbar{width:3px}
 #music-player::-webkit-scrollbar-thumb{background:rgba(110,229,255,.3);border-radius:2px}
 @media (prefers-reduced-motion:reduce){
@@ -144,12 +144,22 @@ body.konami #sky{animation:cyberGlitch .55s steps(2,end) 3}
      The desktop minimum font-size (15px) plus wide letter-spacing can make
      this one-line message exceed a 360px screen. */
   #secret-msg{font-size:8px;letter-spacing:.06em;padding:4px 6px}
-  /* Compact portals so DUMUL/YouTube never cover interactive stars (Sirius etc.) */
+  /* Compact portals so DUMUL never covers interactive stars (Sirius etc.) */
   .portal{margin-top:-16px}
   .portal .lab{padding:4px 7px}
   .portal b{font-size:10px;letter-spacing:.12em}
   .portal small{font-size:8px;margin-top:2px}
   .portal .lab-open{font-size:6.5px;margin-top:2px}
+  /* Sembunyikan portal DUMUL secara default di HP; tampil saat Sabuk Orion diklik */
+  .portal{
+    opacity:0 !important;
+    pointer-events:none !important;
+    transition:opacity .35s ease,transform .35s ease;
+  }
+  .portal.mobile-show{
+    opacity:1 !important;
+    pointer-events:auto !important;
+  }
 }
 
 @media (prefers-reduced-motion:reduce){h1.gl .big,h1.gl .kicker{animation-duration:.01s}}
@@ -419,6 +429,9 @@ var cv=$('#sky'),g=cv.getContext('2d');
 var reduce=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
 var IS_POTATO=!!((navigator.deviceMemory&&navigator.deviceMemory<=2)||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=2)||(navigator.connection&&navigator.connection.saveData));
 var W=0,H=0,DPR=1,START=performance.now(),renderRAF=0,pageHidden=false,hiddenAt=0;
+/* Idle saver: after 60s without pointer activity, skip secondary particles (SS) etc. */
+var lastActivity=performance.now(),idleMode=false,IDLE_MS=60000;
+function markActivity(){lastActivity=performance.now();if(idleMode)idleMode=false;}
 var mouse={x:0,y:0,tx:0,ty:0},glitchUntil=0,hot=null;
 var touchMode=('ontouchstart' in window)||navigator.maxTouchPoints>0;
 var drag={on:false,moved:false,pid:null,x0:0,y0:0,bx:0,by:0};
@@ -934,8 +947,7 @@ CONS.forEach(function(c,ci){
 var CAPS={orion:$('#cap-orion'),virgo:$('#cap-virgo'),canis:$('#cap-canis'),taurus:$('#cap-taurus'),bh:$('#cap-bh')};
 
 var PORTALS=[
- {id:'band',cons:'orion',stars:['mintaka','alnilam','alnitak'],from:'mintaka',hit:'alnilam',href:'dumul.html',title:'DUMUL',sub:'music \u00b7 Limerence album',col:'110,229,255',place:'fig-right'},
- {id:'yt',cons:'virgo',stars:['spica'],from:'spica',hit:'spica',href:'https://www.youtube.com/@dumul17',title:'YouTube',sub:'gameplay \u00b7 mods \u00b7 music',col:'255,122,217',place:'star-right',ext:true}
+ {id:'band',cons:'orion',stars:['mintaka','alnilam','alnitak'],from:'mintaka',hit:'alnilam',href:'dumul.html',title:'DUMUL',sub:'music \u00b7 Limerence album',col:'110,229,255',place:'fig-right'}
 ];
 var TRIGGERS={
  betel:{id:'betel',cons:'orion',star:'betel',rgb:'255,72,64'},
@@ -1114,22 +1126,22 @@ PORTALS.forEach(function(p){
   var a=document.createElement('a');a.className='portal';a.href=p.href;
   a.innerHTML='<span class="lab"><b></b><small></small><em class="lab-open">OPEN →</em></span>';
   a.querySelector('b').textContent=p.title;a.querySelector('small').textContent=p.sub;
-  var h=document.createElement('a');h.className='hit';h.tabIndex=-1;h.setAttribute('aria-hidden','true');
-  if(p.id==='yt'){
-    h.href='#';h.setAttribute('aria-label','Putar suara Spica');
-    h.addEventListener('click',function(e){e.preventDefault();if(!SW)triggerSupernova('spica');});
-    h.addEventListener('mouseenter',function(){hot='spica';a.classList.add('hot');});
-    h.addEventListener('mouseleave',function(){if(hot==='spica')hot=null;a.classList.remove('hot');});
-    h.addEventListener('focus',function(){hot='spica';});
-    h.addEventListener('blur',function(){if(hot==='spica')hot=null;});
-  }else{
-    h.href=p.href;if(p.ext){a.target=h.target='_blank';a.rel=h.rel='noopener';}
-  }
+  var h=document.createElement('button');
+  h.type='button';
+  h.className='hit';
+  h.setAttribute('aria-label','Toggle portal '+p.title);
+  if(p.ext){a.target='_blank';a.rel='noopener';}
   [a,h].forEach(function(el){
-    el.addEventListener('mouseenter',function(){hot=p.id==='yt'?'spica':p.id;a.classList.add('hot');});
-    el.addEventListener('mouseleave',function(){var hk=p.id==='yt'?'spica':p.id;if(hot===hk)hot=null;a.classList.remove('hot');});
-    el.addEventListener('focus',function(){hot=p.id==='yt'?'spica':p.id;});
-    el.addEventListener('blur',function(){var hk=p.id==='yt'?'spica':p.id;if(hot===hk)hot=null;});
+    el.addEventListener('mouseenter',function(){hot=p.id;a.classList.add('hot');});
+    el.addEventListener('mouseleave',function(){if(hot===p.id)hot=null;a.classList.remove('hot');});
+    el.addEventListener('focus',function(){hot=p.id;});
+    el.addEventListener('blur',function(){if(hot===p.id)hot=null;});
+  });
+  h.addEventListener('click',function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    a.classList.toggle('mobile-show');
+    haptic(8);
   });
   document.body.appendChild(h);document.body.appendChild(a);
   p.el=a;p.hitEl=h;
@@ -2024,6 +2036,8 @@ function drawBg(now){
 }
 function drawShooting(now){
   if(reduce||IS_POTATO)return;
+  if(!idleMode&&(now-lastActivity)>IDLE_MS)idleMode=true;
+  if(idleMode)return; /* Energy saver: no new shooting stars while idle */
   if(now>nextSS&&!SW){nextSS=now+6000+Math.random()*7000;
     var ang=(.14+Math.random()*.14)*Math.PI,sp=560+Math.random()*320,dir=Math.random()<.5?1:-1;
     SS.push({x:dir>0?Math.random()*W*.6:W-Math.random()*W*.6,y:Math.random()*H*.35,vx:Math.cos(ang)*sp*dir,vy:Math.sin(ang)*sp,t:now,life:850});}
@@ -2468,13 +2482,10 @@ function drawPortals(age,now){
       var s=c.stars[k],lp=gSky(s.x+ox,s.y+oy);
       if(!lp||lp[2]>=1)return;
       var x=lp[0],y=lp[1],fade=1-.85*lp[2];
-      /* Trigger stars get their shared pulse from drawTriggerVisuals(); the
-         portal itself only contributes the non-trigger star decoration. */
-      if(!(p.id==='yt' && k==='spica')){
-        g.strokeStyle='rgba('+p.col+','+((.5+.4*p.h)*na*fade)+')';g.lineWidth=1;g.beginPath();g.arc(x,y,8+2.5*p.h,0,6.283);g.stroke();
-        var pr=reduce?0:((now*.0011+s.ph)%1);
-        g.strokeStyle='rgba('+p.col+','+((1-pr)*.55*na*fade)+')';g.beginPath();g.arc(x,y,8+pr*11,0,6.283);g.stroke();
-      }
+      /* Portal decoration rings on belt stars (Mintaka/Alnilam/Alnitak). */
+      g.strokeStyle='rgba('+p.col+','+((.5+.4*p.h)*na*fade)+')';g.lineWidth=1;g.beginPath();g.arc(x,y,8+2.5*p.h,0,6.283);g.stroke();
+      var pr=reduce?0:((now*.0011+s.ph)%1);
+      g.strokeStyle='rgba('+p.col+','+((1-pr)*.55*na*fade)+')';g.beginPath();g.arc(x,y,8+pr*11,0,6.283);g.stroke();
     });
   });
 }
@@ -2608,6 +2619,7 @@ var SN_COOLDOWN={};
   var specRAF=0;
   var nowTimer=0;
   var nowPhase=''; /* '' | 'show' | 'absorb' */
+  var lastTrackName='';
   var rowSpecs=rows.map(function(row){return [].slice.call(row.querySelectorAll('.mp-spec i'));});
   var miniBars=[].slice.call(toggle.querySelectorAll('.mp-spec-mini i'));
 
@@ -2629,6 +2641,7 @@ var SN_COOLDOWN={};
   function clearNowPlaying(){
     if(nowTimer){clearTimeout(nowTimer);nowTimer=0;}
     nowPhase='';
+    lastTrackName='';
     if(nowEl){nowEl.classList.remove('show','absorb');nowEl.textContent='';}
   }
   function showNowPlaying(){
@@ -2637,14 +2650,16 @@ var SN_COOLDOWN={};
     if(playingIdx===-1)return;
     var name=trackNames[playingIdx]||'';
     if(!name)return;
-    /* Reset if track changed while already showing. */
-    if(nowPhase==='show'&&nowEl.textContent===name)return;
+    /* Jika lagu yang sama dipicu ulang, jangan re-trigger animasi reflow */
+    if(nowPhase==='show'&&lastTrackName===name)return;
+    lastTrackName=name;
     if(nowTimer){clearTimeout(nowTimer);nowTimer=0;}
     nowEl.textContent=name;
-    nowEl.classList.remove('absorb');
-    /* Force reflow so re-show animates cleanly after absorb. */
-    void nowEl.offsetWidth;
-    nowEl.classList.add('show');
+    if(!nowEl.classList.contains('show')){
+      nowEl.classList.remove('absorb');
+      void nowEl.offsetWidth; /* Reflow hanya jika benar-benar berganti dari state lain */
+      nowEl.classList.add('show');
+    }
     nowPhase='show';
     nowTimer=setTimeout(function(){
       nowTimer=0;
@@ -2852,9 +2867,11 @@ function cOrionOffsetY(){return cons('orion').oy||0}
 
 /* ---------- interaksi ---------- */
 if(!reduce)window.addEventListener('pointermove',function(e){
+  markActivity();
   mouse.px=e.clientX;mouse.py=e.clientY;
   mouse.tx=(e.clientX/W-.5)*2;mouse.ty=(e.clientY/H-.5)*2;
 },{passive:true});
+window.addEventListener('pointerdown',markActivity,{passive:true});
 function updateHover(px,py){
   if(drag.on)return;
   var hit=null,best=12;
@@ -2906,7 +2923,14 @@ document.addEventListener('pointerdown',function(e){
     else if(hit.star==='spica'){triggerSupernova('spica');}
     else if(hit.star==='sirius'){triggerSupernova('sirius');}
     else if(hit.star==='aldebaran'){triggerSupernova('aldebaran');}
-    else haptic(8);
+    else {
+      /* Toggle portal DUMUL jika pengguna nge-tap bintang Sabuk Orion (Mintaka/Alnilam/Alnitak) */
+      if(hit.c.id==='orion'&&(hit.star==='mintaka'||hit.star==='alnilam'||hit.star==='alnitak')){
+        var bandP=PORTALS[0];
+        if(bandP&&bandP.el)bandP.el.classList.toggle('mobile-show');
+      }
+      haptic(8);
+    }
   }
 },{passive:true});
 document.addEventListener('pointerdown',function(e){
@@ -3271,11 +3295,16 @@ window.addEventListener('pageshow',function(e){
 });
 
 /* ---------- v41.4 boot / media warm-up ----------
-   Every load → full boot + matrix rain. Constellation RAF starts only after
-   the warm-up finishes. No sessionStorage state is used for boot skipping. */
+   First visit → full boot + matrix rain. Repeat visit in same session →
+   shortened minMs via sessionStorage flag. */
 (function(){
   var bs=document.getElementById('boot-screen'),fill=document.getElementById('boot-fill'),pct=document.getElementById('boot-pct'),sig=document.getElementById('boot-signal'),mx=document.getElementById('boot-matrix');
   var matrixRAF=0,matrixAlive=false;
+  var isRepeatVisit=false;
+  try{
+    isRepeatVisit=!!sessionStorage.getItem('obs_booted');
+    sessionStorage.setItem('obs_booted','1');
+  }catch(e){}
 
   /* Boot matrix: head glow, glyph mix, clean telemetry (no glitch) */
   matrixAlive=true;
@@ -3463,8 +3492,8 @@ window.addEventListener('pageshow',function(e){
   }
 
   var stars=[SFX.betel,SFX.rigel,SFX.spica,SFX.sirius,SFX.pleione,SFX.aldebaran],t0=bootT0,done=false;
-  var minMs=IS_POTATO?7000:4200;
-  var maxMs=IS_POTATO?12000:8000;
+  var minMs=isRepeatVisit?2000:(IS_POTATO?7000:4200);
+  var maxMs=isRepeatVisit?4000:(IS_POTATO?12000:8000);
   var choicesEl=document.getElementById('boot-choices');
   var capBlue=document.getElementById('boot-cap-blue');
   var capRed=document.getElementById('boot-cap-red');
