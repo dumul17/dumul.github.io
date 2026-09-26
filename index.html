@@ -60,8 +60,12 @@ h1.gl .kicker{animation:gk .65s steps(1,end)}
 .mp-play{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:30px;margin-top:7px;border:1px solid rgba(110,229,255,.22);border-radius:5px;background:rgba(110,229,255,.045);color:#dffaff;font:600 8.5px/1 'Space Grotesk',system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:border-color .25s ease,background .25s ease,color .25s ease,box-shadow .25s ease}.mp-play:hover,.mp-play:focus-visible{border-color:rgba(110,229,255,.45);background:rgba(110,229,255,.09);box-shadow:0 0 14px rgba(110,229,255,.1)}.mp-play:active,.mp-track:active,#music-close:active{transform:translateY(1px)}.mp-play-icon{font-size:8px;color:#6ee5ff;transition:color .25s ease}
 #music-toggle{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:6;display:grid;place-items:center;width:32px;height:32px;border:1px solid rgba(110,229,255,.17);border-radius:5px;background:rgba(6,11,17,.34);color:rgba(214,228,240,.7);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:color .3s ease,border-color .3s ease,background .3s ease,box-shadow .3s ease;overflow:hidden}#music-toggle:hover,#music-toggle:focus-visible{color:#6ee5ff;border-color:rgba(110,229,255,.55);background:rgba(110,229,255,.07)}#music-toggle svg{width:15px;height:15px;display:block;grid-area:1/1;transition:opacity .28s ease,transform .28s ease}#music-toggle.playing-closed{color:#6ee5ff;border-color:rgba(110,229,255,.5);background:rgba(110,229,255,.1);box-shadow:0 0 12px rgba(110,229,255,.18)}#music-toggle.playing-closed svg{opacity:0;transform:scale(.55)}
 .mp-spec-mini{grid-area:1/1;display:inline-flex;align-items:flex-end;justify-content:center;gap:1.5px;height:14px;opacity:0;pointer-events:none;transform:scale(.7);transition:opacity .3s ease,transform .3s ease}.mp-spec-mini i{display:block;width:2px;height:4px;border-radius:1px;background:#6ee5ff;box-shadow:0 0 5px rgba(110,229,255,.65);transform-origin:bottom center;will-change:height;transition:height .12s ease-out}#music-toggle.playing-closed .mp-spec-mini{opacity:1;transform:scale(1)}
+/* Now-playing title: beside logo when HUD closed, then slides into logo after 2s */
+#mp-now-playing{position:fixed;right:50px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:6;height:32px;display:flex;align-items:center;max-width:min(160px,calc(100vw - 72px));padding:0 10px;border:1px solid rgba(110,229,255,.22);border-radius:5px;background:rgba(3,8,13,.82);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 0 12px rgba(110,229,255,.08);font:500 9px/1 'Courier New',monospace;letter-spacing:.06em;color:#dff7ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;transform:translateX(10px) scale(.96);pointer-events:none;visibility:hidden;transition:opacity .38s ease,transform .42s cubic-bezier(.22,.7,.3,1),visibility 0s linear .42s}
+#mp-now-playing.show{opacity:1;transform:none;visibility:visible;transition:opacity .38s ease,transform .42s cubic-bezier(.22,.7,.3,1),visibility 0s}
+#mp-now-playing.absorb{opacity:0;transform:translateX(28px) scale(.55);visibility:hidden;transition:opacity .55s ease,transform .6s cubic-bezier(.4,0,.2,1),visibility 0s linear .55s}
 @media (prefers-reduced-motion:reduce){
-  .mp-track,.mp-spec,.mp-spec i,.mp-state,.mp-play,#music-close,#music-toggle,#music-toggle svg,.mp-spec-mini,.mp-spec-mini i{transition-duration:.01s!important}
+  .mp-track,.mp-spec,.mp-spec i,.mp-state,.mp-play,#music-close,#music-toggle,#music-toggle svg,.mp-spec-mini,.mp-spec-mini i,#mp-now-playing{transition-duration:.01s!important}
 }
 footer{position:fixed;left:0;right:0;bottom:0;z-index:3;padding:0 12px calc(10px + env(safe-area-inset-bottom,0px));pointer-events:none}
 footer nav{display:flex;align-items:center;justify-content:flex-start;gap:7px}.footer-left{display:flex;gap:7px}
@@ -69,7 +73,7 @@ footer nav a{display:grid;place-items:center;width:32px;height:32px;border-radiu
 footer nav a:hover,footer nav a:focus-visible{color:#6ee5ff;border-color:rgba(110,229,255,.55);background:rgba(110,229,255,.07)}
 footer nav svg{width:15px;height:15px;display:block}
 .quote{display:none}
-@media(max-width:520px){#music-player{right:10px;bottom:52px;width:min(244px,calc(100vw - 30px));padding:9px}.mp-name{font-size:8.5px}footer{padding-left:10px;padding-right:10px}#music-toggle{right:10px;width:31px;height:31px}}
+@media(max-width:520px){#music-player{right:10px;bottom:52px;width:min(244px,calc(100vw - 30px));padding:9px}.mp-name{font-size:8.5px}footer{padding-left:10px;padding-right:10px}#music-toggle{right:10px;width:31px;height:31px}#mp-now-playing{right:47px;height:31px;font-size:8px;padding:0 8px;max-width:min(140px,calc(100vw - 64px))}}
 
 .cap{display:none;position:fixed;left:0;top:0;z-index:3;font-size:10px;letter-spacing:.5em;text-transform:uppercase;color:rgba(184,198,214,.42);pointer-events:none;white-space:nowrap}
 #bh-clock{position:fixed;pointer-events:auto;cursor:pointer;left:0;top:0;z-index:5;font:500 8.5px/1 'Space Grotesk',system-ui,sans-serif;letter-spacing:.08em;color:rgba(196,226,240,.58);pointer-events:auto;white-space:nowrap;text-shadow:0 0 7px rgba(110,229,255,.16);text-transform:uppercase}
@@ -292,6 +296,13 @@ body.konami #sky{animation:cyberGlitch .55s steps(2,end) 3}
     right: 8px !important;
     bottom: calc(6px + env(safe-area-inset-bottom, 0px)) !important;
   }
+  #mp-now-playing {
+    right: 42px !important;
+    bottom: calc(6px + env(safe-area-inset-bottom, 0px)) !important;
+    height: 28px !important;
+    font-size: 8px !important;
+    padding: 0 7px !important;
+  }
   #music-player {
     bottom: 48px !important;
     max-height: calc(100vh - 60px) !important;
@@ -376,6 +387,7 @@ body.konami #sky{animation:cyberGlitch .55s steps(2,end) 3}
   </svg>
   <span class="mp-spec-mini" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
 </button>
+<span id="mp-now-playing" aria-hidden="true"></span>
 <footer id="footer">
   <nav aria-label="Links">
     <div class="footer-left">
@@ -1686,7 +1698,7 @@ function startSwallow(href){
   var pf=document.createElement('link');pf.rel='prefetch';pf.href=href;document.head.appendChild(pf);
   /* Include music toggle/HUD + side chrome so YT/IG aren't the only icons
      that fly into Gargantua — previously #music-toggle was left out. */
-  var els=[].slice.call(document.querySelectorAll('#title,#header .sub,footer nav a,footer .quote,.portal,.cap,#music-toggle,#music-player,#owl-source,#bh-clock'));
+  var els=[].slice.call(document.querySelectorAll('#title,#header .sub,footer nav a,footer .quote,.portal,.cap,#music-toggle,#music-player,#mp-now-playing,#owl-source,#bh-clock'));
   var maxD=Math.sqrt(W*W+H*H)*.6;
   els.forEach(function(el){
     var r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
@@ -2514,11 +2526,15 @@ var SN_COOLDOWN={};
    music-toggle logo (note icon hides, bars take its place). */
 (function(){
   var panel=$('#music-player'),toggle=$('#music-toggle'),close=$('#music-close'),playBtn=$('#music-play');
+  var nowEl=$('#mp-now-playing');
   if(!panel||!toggle||!close||!playBtn)return;
   var tracks=[AMB,MUSIC_COLLAP];
   var rows=[].slice.call(panel.querySelectorAll('.mp-track'));
+  var trackNames=rows.map(function(row){var n=row.querySelector('.mp-name');return n?n.textContent.trim():'';});
   var idx=0;
   var specRAF=0;
+  var nowTimer=0;
+  var nowPhase=''; /* '' | 'show' | 'absorb' */
   var rowSpecs=rows.map(function(row){return [].slice.call(row.querySelectorAll('.mp-spec i'));});
   var miniBars=[].slice.call(toggle.querySelectorAll('.mp-spec-mini i'));
   function current(){return tracks[idx];}
@@ -2526,6 +2542,32 @@ var SN_COOLDOWN={};
   function panelOpen(){return panel.classList.contains('open');}
   function stopOther(){
     for(var i=0;i<tracks.length;i++)if(i!==idx)safePause(tracks[i]);
+  }
+  function clearNowPlaying(){
+    if(nowTimer){clearTimeout(nowTimer);nowTimer=0;}
+    nowPhase='';
+    if(nowEl){nowEl.classList.remove('show','absorb');nowEl.textContent='';}
+  }
+  function showNowPlaying(){
+    if(!nowEl)return;
+    var name=trackNames[idx]||'';
+    if(!name)return;
+    /* Reset if track changed while already showing. */
+    if(nowPhase==='show'&&nowEl.textContent===name)return;
+    if(nowTimer){clearTimeout(nowTimer);nowTimer=0;}
+    nowEl.textContent=name;
+    nowEl.classList.remove('absorb');
+    /* Force reflow so re-show animates cleanly after absorb. */
+    void nowEl.offsetWidth;
+    nowEl.classList.add('show');
+    nowPhase='show';
+    nowTimer=setTimeout(function(){
+      nowTimer=0;
+      if(nowPhase!=='show'||!isPlaying()||panelOpen())return;
+      nowEl.classList.add('absorb');
+      nowEl.classList.remove('show');
+      nowPhase='absorb';
+    },2000);
   }
   function sync(){
     var playing=isPlaying();
@@ -2540,6 +2582,10 @@ var SN_COOLDOWN={};
     playBtn.setAttribute('aria-label',playing?'Pause music':'Play music');
     playBtn.innerHTML='<span class="mp-play-icon" aria-hidden="true">'+(playing?'Ⅱ':'▶')+'</span><span class="mp-play-label">'+(playing?'Pause':'Play')+'</span>';
     if(playing)startSpec();else stopSpec();
+    /* Title migrates to logo side when HUD closes while music plays;
+       after 2s it slides into the logo. */
+    if(playing&&!open)showNowPlaying();
+    else clearNowPlaying();
   }
   function pulseBars(bars,now,minH,maxH){
     if(!bars||!bars.length)return;
@@ -2578,6 +2624,7 @@ var SN_COOLDOWN={};
     rows.forEach(function(row){row.classList.remove('playing');});
     playBtn.setAttribute('aria-label','Play music');
     playBtn.innerHTML='<span class="mp-play-icon" aria-hidden="true">▶</span><span class="mp-play-label">Play</span>';
+    clearNowPlaying();
   };
   function open(){
     panel.classList.add('open');panel.setAttribute('aria-hidden','false');toggle.setAttribute('aria-expanded','true');
