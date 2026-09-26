@@ -87,7 +87,7 @@ footer nav svg{width:15px;height:15px;display:block}
 #betel-fx{position:fixed;left:0;top:0;z-index:4;width:52px;height:52px;margin:-26px 0 0 -26px;border:0;border-radius:50%;padding:0;background:transparent;cursor:pointer;outline:none;-webkit-tap-highlight-color:transparent}
 #betel-fx:focus-visible{outline:2px solid #ff7ad9;outline-offset:2px}
 /* Observatory instrument reticle: native CSS cursor, no JS/render-loop work. */
-#betel-fx,#rigel-fx,#sirius-fx,#pleione-fx,#aldebaran-fx,.hit,#bh{cursor:crosshair}
+#betel-fx,#rigel-fx,#sirius-fx,#pleione-fx,#aldebaran-fx,#arcturus-fx,#antares-fx,.hit,#bh{cursor:crosshair}
 /* Tactical HUD corner brackets for portal labels. */
 .portal .lab{position:relative}
 .portal .lab::before,.portal .lab::after{content:'';position:absolute;top:0;width:5px;height:5px;pointer-events:none}
@@ -384,17 +384,21 @@ body.konami #sky{animation:cyberGlitch .55s steps(2,end) 3}
 <button id="sirius-fx" type="button" class="hit" aria-label="Putar suara Sirius"></button>
 <button id="pleione-fx" type="button" class="hit" aria-label="Putar suara Pleione"></button>
 <button id="aldebaran-fx" type="button" class="hit" aria-label="Putar suara Aldebaran"></button>
+<button id="arcturus-fx" type="button" class="hit" aria-label="Putar suara Arcturus"></button>
+<button id="antares-fx" type="button" class="hit" aria-label="Putar suara Antares"></button>
 <div id="veil" aria-hidden="true"></div>
 <section id="music-player" aria-label="Music player" aria-hidden="true">
   <div class="mp-head"><div><span class="mp-kicker">Dumul's Observatory</span><strong>Music Transmission</strong></div><button id="music-close" type="button" aria-label="Tutup music player">×</button></div>
   <div class="mp-section-title">Stellar Signals</div>
   <div class="mp-tracks">
     <button class="mp-track" type="button" data-type="sfx" data-key="aldebaran"><span class="mp-num">01</span><span class="mp-name">aldebaran</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
-    <button class="mp-track" type="button" data-type="sfx" data-key="betel"><span class="mp-num">02</span><span class="mp-name">betelgeuse</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
-    <button class="mp-track" type="button" data-type="sfx" data-key="pleione"><span class="mp-num">03</span><span class="mp-name">pleione</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
-    <button class="mp-track" type="button" data-type="sfx" data-key="rigel"><span class="mp-num">04</span><span class="mp-name">rigel</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
-    <button class="mp-track" type="button" data-type="sfx" data-key="spica"><span class="mp-num">05</span><span class="mp-name">spica</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
-    <button class="mp-track" type="button" data-type="sfx" data-key="sirius"><span class="mp-num">06</span><span class="mp-name">sirius</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
+    <button class="mp-track" type="button" data-type="sfx" data-key="antares"><span class="mp-num">02</span><span class="mp-name">antares</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
+    <button class="mp-track" type="button" data-type="sfx" data-key="arcturus"><span class="mp-num">03</span><span class="mp-name">arcturus</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
+    <button class="mp-track" type="button" data-type="sfx" data-key="betel"><span class="mp-num">04</span><span class="mp-name">betelgeuse</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
+    <button class="mp-track" type="button" data-type="sfx" data-key="pleione"><span class="mp-num">05</span><span class="mp-name">pleione</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
+    <button class="mp-track" type="button" data-type="sfx" data-key="rigel"><span class="mp-num">06</span><span class="mp-name">rigel</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
+    <button class="mp-track" type="button" data-type="sfx" data-key="sirius"><span class="mp-num">07</span><span class="mp-name">sirius</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
+    <button class="mp-track" type="button" data-type="sfx" data-key="spica"><span class="mp-num">08</span><span class="mp-name">spica</span><span class="mp-spec" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="mp-state" aria-hidden="true">●</span></button>
   </div>
   <div class="mp-section-title">Observatory BGM</div>
   <div class="mp-tracks">
@@ -457,6 +461,8 @@ var AMB=mkAudio('constellation.opus',.5,true);
 var GARG=mkAudio('collapsars.opus',0,true);
 var MUSIC_COLLAP=mkAudio('collapsars.opus',.5,true);
 var SFX={rigel:mkAudio('rigel.opus',.85,false),spica:mkAudio('spica.opus',.85,false),betel:mkAudio('betelgeuse.opus',.85,false),sirius:mkAudio('sirius.opus',.85,false),pleione:mkAudio('pleione.opus',.85,false),aldebaran:mkAudio('aldebaran.opus',.85,false)};
+SFX.arcturus=mkAudio('arcturus.opus',.85,false);
+SFX.antares=mkAudio('antares.opus',.85,false);
 function mkAudio(name,vol,loop){var a=new Audio(encodeURIComponent(name));a.preload='auto';a.loop=!!loop;a.volume=vol;return a;}
 function safePlay(a){
   if(!a)return false;
@@ -687,6 +693,8 @@ function avColorForAudio(a){
     if(a===SFX.sirius)return [180,220,255];
     if(a===SFX.pleione)return [145,170,255];
     if(a===SFX.aldebaran)return [255,160,90];
+    if(a===SFX.arcturus)return [255,180,80];
+    if(a===SFX.antares)return [255,69,0];
   }
   return [155,215,255];
 }
@@ -928,6 +936,48 @@ var CONS=[
    ["elnath","upperMid"],["upperMid","theta1"],["theta1","theta2"],["theta2","hyadesTip"],
    ["hyadesTip","tail1"],["tail1","tail2a"],["tail2a","tail2b"],
    ["leftHorn","aldebaran"],["aldebaran","nearAlde"],["nearAlde","hyadesTip"]
+  ]},
+ {id:'bootes',ra0:0,delay:1.0,phase:1.2,
+  /* Classic kite matching Space.com ref: top → shoulders → lower sides →
+     Arcturus at tip, two short legs below. y grows downward. */
+  stars:{
+   bootes_top:{fx:0,fy:-95,r:1.75,c:'#eaf6ff'},
+   bootes_left:{fx:-58,fy:-38,r:1.7,c:'#eaf6ff'},
+   bootes_right:{fx:52,fy:-48,r:1.7,c:'#eaf6ff'},
+   bootes_ml:{fx:-28,fy:8,r:1.65,c:'#eaf6ff'},
+   izar:{fx:32,fy:2,r:2.0,c:'#dcefff'},
+   arcturus:{fx:4,fy:58,r:3.8,c:'#ffb450',name:'Arcturus',nx:-1,dy:14},
+   bootes_legL:{fx:-32,fy:98,r:1.55,c:'#eaf6ff'},
+   bootes_legR:{fx:38,fy:102,r:1.55,c:'#eaf6ff'}
+  },
+  lines:[
+   ["bootes_top","bootes_left"],["bootes_top","bootes_right"],
+   ["bootes_left","bootes_ml"],["bootes_right","izar"],
+   ["bootes_ml","arcturus"],["izar","arcturus"],
+   ["arcturus","bootes_legL"],["arcturus","bootes_legR"]
+  ]},
+ {id:'scorpius',ra0:0,delay:1.1,phase:1.4,
+  /* Geometry LOCKED to scorpius-map.html — 1000×1000 reference coordinates. */
+  stars:{
+   topmost:{fx:875,fy:115,r:2.2,c:'#eaf6ff'},
+   midRight:{fx:875,fy:260,r:2.0,c:'#eaf6ff'},
+   rightmost:{fx:925,fy:395,r:1.8,c:'#dcefff'},
+   antares:{fx:625,fy:345,r:4.0,c:'#ff4500',name:'Antares',nx:-1,dy:-11,specAfter:1},
+   belowAntares:{fx:575,fy:435,r:2.0,c:'#eaf6ff'},
+   midBody:{fx:515,fy:610,r:2.2,c:'#dcefff'},
+   lowerMid:{fx:530,fy:705,r:2.1,c:'#ffe9c7'},
+   bottomBody:{fx:550,fy:835,r:2.0,c:'#eaf6ff'},
+   bm1:{fx:450,fy:875,r:1.8,c:'#ffe9c7'},
+   bm2:{fx:380,fy:890,r:1.8,c:'#eaf6ff'},
+   bottomLeft:{fx:235,fy:905,r:2.2,c:'#fff2cc'},
+   tiny:{fx:145,fy:810,r:1.5,c:'#eaf6ff'},
+   small:{fx:185,fy:745,r:1.6,c:'#dcefff'},
+   shaula:{fx:285,fy:665,r:3.2,c:'#7dd8e0'}
+  },
+  lines:[
+   ["antares","topmost"],["antares","midRight"],["antares","rightmost"],["antares","belowAntares"],
+   ["belowAntares","midBody"],["midBody","lowerMid"],["lowerMid","bottomBody"],["bottomBody","bm1"],
+   ["bm1","bm2"],["bm2","bottomLeft"],["bottomLeft","tiny"],["tiny","small"],["small","shaula"]
   ]}
 ];
 
@@ -959,23 +1009,25 @@ var TRIGGERS={
  spica:{id:'spica',cons:'virgo',star:'spica',rgb:'235,92,255'},
  sirius:{id:'sirius',cons:'canis',star:'sirius',rgb:'180,220,255'},
  pleione:{id:'pleione',cons:'pleiades',star:'Pleione',rgb:'145,170,255'},
- aldebaran:{id:'aldebaran',cons:'taurus',star:'aldebaran',rgb:'255,160,90'}
+ aldebaran:{id:'aldebaran',cons:'taurus',star:'aldebaran',rgb:'255,160,90'},
+ arcturus:{id:'arcturus',cons:'bootes',star:'arcturus',rgb:'255,180,80'},
+ antares:{id:'antares',cons:'scorpius',star:'antares',rgb:'255,69,0'}
 };
 
 /* ---------- PLEIADES: 7 bright + 2 dim, no imaginary lines ----------
-   Source coordinates are normalized 0..1 from the uploaded reference.
-   Pleione is one of the seven bright stars and is the only interactive one. */
+   Compact mini-dipper matching EarthSky Taurus chart. Normalized 0..1;
+   Pleione (near Atlas, right side) is the only interactive star. */
 var PLEIADES={
   bright:[
-    {x:.245,y:.425,name:'Merope',r:1.8},
-    {x:.416,y:.340,name:'Electra',r:1.8},
-    {x:.539,y:.477,name:'Alcyone',r:1.9},
-    {x:.731,y:.472,name:'Atlas',r:1.85},
-    {x:.340,y:.608,name:'Maia',r:1.8},
-    {x:.304,y:.665,name:'Taygeta',r:1.75},
-    {x:.356,y:.723,name:'Pleione',interactive:true,r:1.9}
+    {x:.32,y:.28,name:'Taygeta',r:1.75},
+    {x:.22,y:.42,name:'Electra',r:1.8},
+    {x:.42,y:.34,name:'Maia',r:1.8},
+    {x:.52,y:.48,name:'Alcyone',r:1.95},
+    {x:.38,y:.62,name:'Merope',r:1.8},
+    {x:.78,y:.52,name:'Atlas',r:1.85},
+    {x:.84,y:.40,name:'Pleione',interactive:true,r:1.9}
   ],
-  dim:[{x:.730,y:.536,r:1.15},{x:.242,y:.957,r:1.15}],
+  dim:[{x:.58,y:.22,r:1.15},{x:.68,y:.60,r:1.15}],
   x:0,y:0,scale:1,ready:false
 };
 PLEIADES.bright.forEach(function(st){st.ph=Math.random()*6.283;st._tw=0;st._twHit=-1;});
@@ -1014,6 +1066,8 @@ function playingConstellationId(){
   if(activeSfx===SFX.sirius)return 'canis';
   if(activeSfx===SFX.pleione)return 'pleiades';
   if(activeSfx===SFX.aldebaran)return 'taurus';
+  if(activeSfx===SFX.arcturus)return 'bootes';
+  if(activeSfx===SFX.antares)return 'scorpius';
   return null;
 }
 function updateConstellationFocus(now){
@@ -1180,16 +1234,30 @@ function layout(){
   fitTitle();
   var hb=$('#header').getBoundingClientRect().bottom,ft=$('#footer').getBoundingClientRect().top;
   var top=hb+10,bot=ft-8,ah=Math.max(120,bot-top),portrait=W<H*1.05;
+  /* Gargantua's home position/radius, needed up front so Boötes and the
+     Pleiades can be nudged clear of it right after they're placed below. */
+  BH.R=portrait?Math.min(30,W*.075):Math.min(30,ah*.11);
+  BH.hx=W*.5;BH.hy=portrait?top+ah*.48:top+ah*.44;
   /* Canis Major: small + high, far from Gargantua to avoid lens stretch.
      Size kept comparable to Orion / Virgo. */
   /* Taurus: mid-left lower (horns left, tail right) — Hyades LOCK coords scaled into box. */
   /* 4-Zone Landscape Layout Optimization */
   var boxes=portrait
-    ?{canis:[W*.04,top+ah*.14,W*.28,top+ah*.40],virgo:[W*.52,top+ah*.72,W*.82,bot-34],orion:[W*.40,top-ah*.02,W*.72,top+ah*.32],taurus:[W*.12,top+ah*.64,W*.42,top+ah*.92]}
+    ?{canis:[W*.04,top+ah*.14,W*.28,top+ah*.40],
+      virgo:[W*.52,top+ah*.72,W*.82,bot-34],
+      orion:[W*.40,top-ah*.02,W*.72,top+ah*.32],
+      taurus:[W*.12,top+ah*.64,W*.42,top+ah*.92],
+      /* Scorpius top-right of Orion. Boötes = compact kite above Virgo,
+         far right of centre so Gargantua lensing stays mild. */
+      bootes:[W*.74,top+ah*.34,W*.92,top+ah*.60],
+      scorpius:[W*.76,top+ah*.05,W*.88,top+ah*.28]}
     :{canis:[W*.02,top+ah*.06,W*.16,top+ah*.48],
       taurus:[W*.02,top+ah*.50,W*.17,bot-32],
       orion:[W*.16,top+ah*.02,W*.31,bot-12],
-      virgo:[W*.66,top+ah*.06,W*.92,bot-12]};
+      virgo:[W*.68,top+ah*.08,W*.94,bot-12],
+      /* Boötes compact upper-right, left of Virgo, clear of BH column. */
+      bootes:[W*.58,top+ah*.04,W*.68,top+ah*.32],
+      scorpius:[W*.33,top+ah*.16,W*.39,top+ah*.48]};
   CONS.forEach(function(c){
     var b=boxes[c.id],bw=b[2]-b[0],bh=b[3]-b[1],sc=Math.min(bw/c.bw,bh/c.bh);
     var x0=b[0]+(bw-c.bw*sc)/2,y0=b[1]+(bh-c.bh*sc)/2;
@@ -1200,17 +1268,106 @@ function layout(){
     });
     if(c.nebula){c.nebula.x=x0+(c.nebula.rx-c.minx)*sc;c.nebula.y=y0+(c.nebula.ry-c.miny)*sc;}
   });
-  /* Pleiades sits northwest (left + up) of Spica.  Keep the cluster compact so
-     it reads as a blue stellar group rather than a fourth large constellation. */
+  /* ---- shared anti-lensing / anti-clip helpers ----
+     Rather than hand-tuning fragile pixel offsets per breakpoint, both
+     Boötes and the Pleiades get a runtime safety pass: measure how close
+     the shape sits to Gargantua's centre, push it straight away until
+     it clears a safe radius, back the push off if that would make it
+     overlap a neighbouring constellation's box, then clamp the whole
+     shape back inside the visible play area so nothing is ever cropped
+     in odd mobile aspect ratios. */
+  function rectDistToPoint(minX,maxX,minY,maxY,px,py){
+    var cx=Math.max(minX,Math.min(px,maxX)),cy=Math.max(minY,Math.min(py,maxY));
+    return Math.hypot(px-cx,py-cy);
+  }
+  function boxesOverlap(minX,maxX,minY,maxY,b){
+    return minX<b[2]&&maxX>b[0]&&minY<b[3]&&maxY>b[1];
+  }
+  /* Straight AABB separation: shove the rect out along whichever axis needs
+     the smaller nudge, away from the box's centre. Used for the shapes
+     (Pleiades, mainly) whose home position is a formula rather than a
+     fixed box, so an overlap can only be caught after the fact. */
+  function resolveCollisions(minX,maxX,minY,maxY,allowIds){
+    var rect={minX:minX,maxX:maxX,minY:minY,maxY:maxY};
+    for(var pass=0;pass<6;pass++){
+      var moved=false;
+      for(var id in boxes){
+        if(allowIds.indexOf(id)!==-1)continue;
+        var b=boxes[id];
+        if(!boxesOverlap(rect.minX,rect.maxX,rect.minY,rect.maxY,b))continue;
+        var ox=Math.min(rect.maxX,b[2])-Math.max(rect.minX,b[0]);
+        var oy=Math.min(rect.maxY,b[3])-Math.max(rect.minY,b[1]);
+        if(ox<=0||oy<=0)continue;
+        var dx=0,dy=0;
+        if(ox<oy){var rc=(rect.minX+rect.maxX)/2,bc=(b[0]+b[2])/2;dx=(rc<bc?-1:1)*(ox+4);}
+        else{var rc2=(rect.minY+rect.maxY)/2,bc2=(b[1]+b[3])/2;dy=(rc2<bc2?-1:1)*(oy+4);}
+        rect.minX+=dx;rect.maxX+=dx;rect.minY+=dy;rect.maxY+=dy;moved=true;
+      }
+      if(!moved)break;
+    }
+    return{dx:rect.minX-minX,dy:rect.minY-minY};
+  }
+  function safePush(minX,maxX,minY,maxY,skipId){
+    /* Beyond ~5.5x BH.R the lens warp is negligible — keep shapes clear
+       of the strong-lensing zone around Gargantua. */
+    var safeR=BH.R*5.5;
+    var d=rectDistToPoint(minX,maxX,minY,maxY,BH.hx,BH.hy);
+    if(d>=safeR)return{dx:0,dy:0};
+    var cx=(minX+maxX)/2,cy=(minY+maxY)/2,vx=cx-BH.hx,vy=cy-BH.hy,vl=Math.hypot(vx,vy)||1;
+    var ux=vx/vl,uy=vy/vl,need=safeR-d+6,dx=ux*need,dy=uy*need;
+    /* Cap the correction so it never flings the shape across the screen. */
+    var cap=Math.min(W,ah)*.28,len=Math.hypot(dx,dy);
+    if(len>cap){var k=cap/len;dx*=k;dy*=k;}
+    var tries=0;
+    while(tries<6){
+      var nMinX=minX+dx,nMaxX=maxX+dx,nMinY=minY+dy,nMaxY=maxY+dy,hit=false;
+      for(var id in boxes){if(id===skipId)continue;if(boxesOverlap(nMinX,nMaxX,nMinY,nMaxY,boxes[id])){hit=true;break;}}
+      if(!hit)break;
+      dx*=.55;dy*=.55;tries++;
+    }
+    return{dx:dx,dy:dy};
+  }
+  function shiftBootes(dx,dy){
+    var bo=cons('bootes');if(!bo||(!dx&&!dy))return;
+    Object.keys(bo.stars).forEach(function(k){var s=bo.stars[k];s.x+=dx;s.y+=dy;});
+    bo.minX+=dx;bo.maxX+=dx;bo.minY+=dy;bo.maxY+=dy;
+    if(bo.nebula){bo.nebula.x+=dx;bo.nebula.y+=dy;}
+  }
+  (function(){ /* Boötes: anti-lensing → anti-overlap → on-screen clamp */
+    var bo=cons('bootes');if(!bo)return;
+    var push=safePush(bo.minX,bo.maxX,bo.minY,bo.maxY,'bootes');
+    shiftBootes(push.dx,push.dy);
+    var coll=resolveCollisions(bo.minX,bo.maxX,bo.minY,bo.maxY,['bootes']);
+    shiftBootes(coll.dx,coll.dy);
+    var m=10,cx0=Math.max(0,m-bo.minX),cx1=Math.min(0,W-m-bo.maxX);
+    var cy0=Math.max(0,top+8-bo.minY),cy1=Math.min(0,bot-8-bo.maxY);
+    shiftBootes(cx0||cx1,cy0||cy1);
+  })();
+  /* Pleiades: compact cluster above/right of Taurus (EarthSky chart).
+     Anchor on cluster centre; Pleione stays interactive on the right. */
   (function(){
-    var sp=cons('virgo').stars.spica;
-    var ps=Math.min(W,H)*(portrait ? .22 : .20);
-    var targetX=sp.x-Math.min(portrait ? 105 : 130,W*.20);
-    var targetY=sp.y-Math.min(H<500 ? 40 : 65,H*.10);
+    var ad=cons('taurus').stars.aldebaran;
+    /* Smaller footprint so it never crowds the BH or other rasies. */
+    var ps=Math.min(W,H)*(portrait ? .095 : .085);
+    var targetX=ad.x+Math.min(portrait ? 64 : 80,W*.13);
+    var targetY=ad.y-Math.min(portrait ? 100 : 115,H*.17);
     PLEIADES.scale=ps;
-    PLEIADES.x=targetX-.356*ps;
-    PLEIADES.y=targetY-.723*ps;
+    PLEIADES.x=targetX-.52*ps;
+    PLEIADES.y=targetY-.48*ps;
     PLEIADES.ready=true;
+    var minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
+    PLEIADES.bright.concat(PLEIADES.dim).forEach(function(st){
+      var x=PLEIADES.x+st.x*ps,y=PLEIADES.y+st.y*ps;
+      minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);
+    });
+    /* Taurus exempt (cluster is meant to sit near Aldebaran). */
+    var push=safePush(minX,maxX,minY,maxY,'taurus');
+    PLEIADES.x+=push.dx;PLEIADES.y+=push.dy;minX+=push.dx;maxX+=push.dx;minY+=push.dy;maxY+=push.dy;
+    var coll=resolveCollisions(minX,maxX,minY,maxY,['taurus']);
+    PLEIADES.x+=coll.dx;PLEIADES.y+=coll.dy;minX+=coll.dx;maxX+=coll.dx;minY+=coll.dy;maxY+=coll.dy;
+    var m=10,cx0=Math.max(0,m-minX),cx1=Math.min(0,W-m-maxX);
+    var cy0=Math.max(0,top+8-minY),cy1=Math.min(0,bot-8-maxY);
+    PLEIADES.x+=cx0||cx1;PLEIADES.y+=cy0||cy1;
   })();
   var clk=$('#bh-clock'),ft2=$('#footer').getBoundingClientRect();
   clk.style.transform='translate(calc(14px + env(safe-area-inset-left,0px)),'+Math.round(ft2.top-26)+'px)';
@@ -1219,8 +1376,6 @@ function layout(){
   CAPS.virgo.style.transform='translate('+Math.round(v.maxX-42)+'px,'+Math.round(v.minY-24)+'px)';
   CAPS.canis.style.transform='translate('+Math.round((cm.minX+cm.maxX)/2-48)+'px,'+Math.round(cm.maxY+18)+'px)';
   if(tau&&CAPS.taurus)CAPS.taurus.style.transform='translate('+Math.round((tau.minX+tau.maxX)/2-28)+'px,'+Math.round(tau.maxY+18)+'px)';
-  BH.R=portrait?Math.min(30,W*.075):Math.min(30,ah*.11);
-  BH.hx=W*.5;BH.hy=portrait?top+ah*.48:top+ah*.44;
   if(!drag.on){BH.x=BH.hx;BH.y=BH.hy;}
   var bhEl=$('#bh');bhEl.style.width=Math.round(BH.R*16)+'px';bhEl.style.height=Math.round(BH.R*10)+'px';
   bhEl.style.transform='translate('+Math.round(BH.x-BH.R*8)+'px,'+Math.round(BH.y-BH.R*5)+'px)';
@@ -1237,6 +1392,16 @@ function layout(){
   if(ad&&afx){
     afx.style.width=afx.style.height='52px';afx.style.marginLeft=afx.style.marginTop='-26px';
     afx.style.transform='translate('+Math.round(ad.x+skyPan.x)+'px,'+Math.round(ad.y+skyPan.y)+'px)';
+  }
+  var arc=cons('bootes')&&cons('bootes').stars.arcturus,arcFx=$('#arcturus-fx');
+  if(arc&&arcFx){
+    arcFx.style.width=arcFx.style.height='52px';arcFx.style.marginLeft=arcFx.style.marginTop='-26px';
+    arcFx.style.transform='translate('+Math.round(arc.x+skyPan.x)+'px,'+Math.round(arc.y+skyPan.y)+'px)';
+  }
+  var ant=cons('scorpius')&&cons('scorpius').stars.antares,antFx=$('#antares-fx');
+  if(ant&&antFx){
+    antFx.style.width=antFx.style.height='52px';antFx.style.marginLeft=antFx.style.marginTop='-26px';
+    antFx.style.transform='translate('+Math.round(ant.x+skyPan.x)+'px,'+Math.round(ant.y+skyPan.y)+'px)';
   }
   /* Dedicated DOM hit target for Pleione — same reliability as Rigel/Betel/Sirius. */
   var pfx=$('#pleione-fx');
@@ -2298,7 +2463,7 @@ function drawStars(c,age,now){
   var focus=constellationFocus(c);
   Object.keys(c.stars).forEach(function(k){
     var s=c.stars[k],a=clamp((age-s.t0)/.5);s._a=a;if(a<=0)return;
-    var triggerKey=(k==='betel'?'betel':(k==='rigel'?'rigel':(k==='spica'?'spica':(k==='sirius'?'sirius':(k==='aldebaran'?'aldebaran':null)))));
+    var triggerKey=(k==='betel'?'betel':(k==='rigel'?'rigel':(k==='spica'?'spica':(k==='sirius'?'sirius':(k==='aldebaran'?'aldebaran':(k==='arcturus'?'arcturus':(k==='antares'?'antares':null)))))));
     var tr=triggerKey?TRIGGERS[triggerKey]:null;
     var isPlaying=!!(tr&&activeSfx===SFX[triggerKey]&&!SFX[triggerKey].paused);
     var cheap=audioFocus&&!isPlaying;
@@ -2315,7 +2480,9 @@ function drawStars(c,age,now){
       g.fillStyle=gr;g.beginPath();g.arc(x,y,r*5,0,6.283);g.fill();
       g.fillStyle='rgba(255,255,255,'+(.95*a)+')';g.beginPath();g.arc(x,y,Math.max(.9,r*.62),0,6.283);g.fill();
     }
-    if(s.r>=2.9 && !(c.id==='taurus' && k==='elnath')){
+    /* Cross reticle only on named bright stars — skips Scorpius tail (Shaula)
+       and other anonymous bright points so the sting doesn't show a "+". */
+    if(s.r>=2.9 && s.name && !(c.id==='taurus' && k==='elnath')){
       g.strokeStyle='rgba('+s.rgb+','+(.4*a*tw)+')';g.lineWidth=.8;
       g.beginPath();g.moveTo(x-r*4.2,y);g.lineTo(x+r*4.2,y);g.moveTo(x,y-r*4.2);g.lineTo(x,y+r*4.2);g.stroke();
     }
@@ -2325,7 +2492,9 @@ function drawStars(c,age,now){
          can decide the cheap star path before any gradient work is allocated. */
       g.font='500 10px "Space Grotesk",system-ui,sans-serif';
       g.textAlign=s.nx<0?'right':'left';
-      var labelX=x+s.nx*(r*3.4+7), labelY=y+3+(s.dy||0);
+      /* Closer gap for edge stars (Antares) so the label hugs the pulse. */
+      var gapH=s.specAfter? (r*1.6+4) : (r*3.4+7);
+      var labelX=x+s.nx*gapH, labelY=y+3+(s.dy||0);
       var labelAlpha=isPlaying?.95:.62;
       g.fillStyle=tr?'rgba('+tr.rgb+','+labelAlpha+')':'rgba(184,198,214,'+labelAlpha+')';
       g.fillText(s.name,labelX,labelY);
@@ -2333,17 +2502,23 @@ function drawStars(c,age,now){
       /*
        * Mini spectrum:
        * - only visible while its own audio is actually PLAYING
-       * - always sits outside the label with a measured gap
-       * - Spica/Rigel open left (away from DUMUL portal); Betelgeuse opens right
+       * - default: nx<0 → further left (Spica/Rigel); nx>0 → right of text
+       * - specAfter: always "Name [spectrum]" reading order (spectrum to the
+       *   RIGHT of the text) so Antares doesn't throw bars into Betelgeuse
        */
       if(tr&&isPlaying){
         var bars=7, gap=1.8, bw=1.35, total=bars*bw+(bars-1)*gap;
         var labelW=g.measureText(s.name).width, gapFromText=8;
-        /* nx<0 → right-aligned label, spectrum further left (Spica/Rigel). */
-        var sx=(s.nx<0)
-          ? (labelX-labelW-gapFromText-total)
-          : (labelX+labelW+gapFromText);
-        var sy=labelY-7;
+        var sx,sy=labelY-7;
+        if(s.specAfter){
+          /* Right of the text block, regardless of textAlign. */
+          var textRight=s.nx<0?labelX:(labelX+labelW);
+          sx=textRight+gapFromText;
+        }else{
+          sx=(s.nx<0)
+            ? (labelX-labelW-gapFromText-total)
+            : (labelX+labelW+gapFromText);
+        }
         g.save();g.globalCompositeOperation='lighter';
         for(var bi=0;bi<bars;bi++){
           var wave=.5+.5*Math.sin(now*.009+bi*1.17+s.ph);
@@ -2664,24 +2839,24 @@ var SN_COOLDOWN={};
   var nowEl=$('#mp-now-playing');
   if(!panel||!toggle||!close||!playBtn)return;
 
-  /* Unified track list: the 6 Stellar Signals (star SFX, wired through
-     triggerSupernova so the HUD row does the exact same thing as tapping
-     the star on the canvas) plus the 2 Observatory BGM loops. Order must
-     match the HTML rows (sfx rows first, then bgm rows). */
+  /* Unified track list: the 8 Stellar Signals (star SFX) in A-Z order,
+     followed by the 2 Observatory BGM loops. The order must match the HTML. */
   var tracks=[
     {type:'sfx',key:'aldebaran',name:'aldebaran',audio:SFX.aldebaran},
+    {type:'sfx',key:'antares',name:'antares',audio:SFX.antares},
+    {type:'sfx',key:'arcturus',name:'arcturus',audio:SFX.arcturus},
     {type:'sfx',key:'betel',name:'betelgeuse',audio:SFX.betel},
     {type:'sfx',key:'pleione',name:'pleione',audio:SFX.pleione},
     {type:'sfx',key:'rigel',name:'rigel',audio:SFX.rigel},
-    {type:'sfx',key:'spica',name:'spica',audio:SFX.spica},
     {type:'sfx',key:'sirius',name:'sirius',audio:SFX.sirius},
+    {type:'sfx',key:'spica',name:'spica',audio:SFX.spica},
     {type:'bgm',index:0,name:'constellation',audio:AMB},
     {type:'bgm',index:1,name:'collapsars',audio:MUSIC_COLLAP}
   ];
 
   var rows=[].slice.call(panel.querySelectorAll('.mp-track'));
   var trackNames=tracks.map(function(t){return t.name;});
-  var activeIdx=6; /* default highlighted row: Constellation BGM */
+  var activeIdx=8; /* default highlighted row: Constellation BGM */
   var specRAF=0;
   var nowTimer=0;
   var nowPhase=''; /* '' | 'show' | 'absorb' */
@@ -2973,8 +3148,8 @@ function updateHover(px,py){
       if(d<5&&d<best){best=d;hit={c:c,line:i};}
     });
   });
-  if(hit){hot=hit.star==='betel'?'betel':(hit.star==='rigel'?'rigel':(hit.star==='spica'?'spica':(hit.star==='sirius'?'sirius':(hit.star==='aldebaran'?'aldebaran':hot))));if(hit.line!=null)hit.c._hot=hit.line;}
-  else if(hot!=='bh'&&hot!=='spica'&&hot!=='rigel'&&hot!=='betel'&&hot!=='sirius')hot=null;
+  if(hit){hot=hit.star==='betel'?'betel':(hit.star==='rigel'?'rigel':(hit.star==='spica'?'spica':(hit.star==='sirius'?'sirius':(hit.star==='aldebaran'?'aldebaran':(hit.star==='arcturus'?'arcturus':(hit.star==='antares'?'antares':hot))))));if(hit.line!=null)hit.c._hot=hit.line;}
+  else if(hot!=='bh'&&hot!=='spica'&&hot!=='rigel'&&hot!=='betel'&&hot!=='sirius'&&hot!=='aldebaran'&&hot!=='arcturus'&&hot!=='antares')hot=null;
 }
 document.addEventListener('pointerdown',function(e){
   if(SW||drag.on||e.target.closest('#betel-fx,#rigel-fx,#sirius-fx,#bh,.portal,.hit,#owl-source,#bh-clock,#music-toggle,#music-player'))return;
@@ -3000,6 +3175,8 @@ document.addEventListener('pointerdown',function(e){
     else if(hit.star==='spica'){triggerSupernova('spica');}
     else if(hit.star==='sirius'){triggerSupernova('sirius');}
     else if(hit.star==='aldebaran'){triggerSupernova('aldebaran');}
+    else if(hit.star==='arcturus'){triggerSupernova('arcturus');}
+    else if(hit.star==='antares'){triggerSupernova('antares');}
     else {
       /* Toggle portal DUMUL jika pengguna nge-tap bintang Sabuk Orion (Mintaka/Alnilam/Alnitak) */
       if(hit.c.id==='orion'&&(hit.star==='mintaka'||hit.star==='alnilam'||hit.star==='alnitak')){
@@ -3133,6 +3310,16 @@ function syncSkyPanHits(){
       var afx=$('#aldebaran-fx'),pAd=skyHitXY(tau.stars.aldebaran.x,tau.stars.aldebaran.y);
       if(afx)afx.style.transform='translate('+Math.round(pAd[0])+'px,'+Math.round(pAd[1])+'px)';
     }
+    var bo=cons('bootes');
+    if(bo&&bo.stars&&bo.stars.arcturus){
+      var arcFx=$('#arcturus-fx'),pArc=skyHitXY(bo.stars.arcturus.x,bo.stars.arcturus.y);
+      if(arcFx)arcFx.style.transform='translate('+Math.round(pArc[0])+'px,'+Math.round(pArc[1])+'px)';
+    }
+    var sc=cons('scorpius');
+    if(sc&&sc.stars&&sc.stars.antares){
+      var antFx=$('#antares-fx'),pAnt=skyHitXY(sc.stars.antares.x,sc.stars.antares.y);
+      if(antFx)antFx.style.transform='translate('+Math.round(pAnt[0])+'px,'+Math.round(pAnt[1])+'px)';
+    }
     if(PLEIADES.ready){
       var pl=PLEIADES.bright.filter(function(z){return z.interactive;})[0];
       var pfx=$('#pleione-fx');
@@ -3254,6 +3441,18 @@ if(adFx){
   adFx.addEventListener('mouseenter',function(){hot='aldebaran';});
   adFx.addEventListener('mouseleave',function(){if(hot==='aldebaran')hot=null;});
   adFx.addEventListener('click',function(){if(!SW)triggerSupernova('aldebaran');});
+}
+var arcFx=$('#arcturus-fx');
+if(arcFx){
+  arcFx.addEventListener('mouseenter',function(){hot='arcturus';});
+  arcFx.addEventListener('mouseleave',function(){if(hot==='arcturus')hot=null;});
+  arcFx.addEventListener('click',function(){if(!SW)triggerSupernova('arcturus');});
+}
+var antFx=$('#antares-fx');
+if(antFx){
+  antFx.addEventListener('mouseenter',function(){hot='antares';});
+  antFx.addEventListener('mouseleave',function(){if(hot==='antares')hot=null;});
+  antFx.addEventListener('click',function(){if(!SW)triggerSupernova('antares');});
 }
 
 /* ---------- easter eggs ---------- */
@@ -3568,7 +3767,7 @@ window.addEventListener('pageshow',function(e){
     var rtM;window.addEventListener('resize',function(){clearTimeout(rtM);rtM=setTimeout(function(){if(matrixAlive)resizeMatrix();},150);});
   }
 
-  var stars=[SFX.betel,SFX.rigel,SFX.spica,SFX.sirius,SFX.pleione,SFX.aldebaran],t0=bootT0,done=false;
+  var stars=[SFX.betel,SFX.rigel,SFX.spica,SFX.sirius,SFX.pleione,SFX.aldebaran,SFX.arcturus,SFX.antares],t0=bootT0,done=false;
   var minMs=isRepeatVisit?2000:(IS_POTATO?7000:4200);
   var maxMs=isRepeatVisit?4000:(IS_POTATO?12000:8000);
   var choicesEl=document.getElementById('boot-choices');
