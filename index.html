@@ -2529,18 +2529,25 @@ function drawPortals(age,now){
     }
     if(na<=0)return;
     if(!p.el.classList.contains('on'))p.el.classList.add('on');
-    /* Connector: star end uses full lens+pan; panel end is fixed on screen. */
-    var fx=p.fx!=null?p.fx:p.lx,fy=p.fy!=null?p.fy:p.ly;
-    var l0=gSky(p.sx+ox,p.sy+oy);
-    if(l0&&l0[2]<1){
-      g.setLineDash([3,5]);g.lineWidth=1;g.strokeStyle='rgba('+p.col+','+((.32+.45*p.h)*na*(1-.5*l0[2]))+')';
-      g.beginPath();g.moveTo(l0[0],l0[1]);g.lineTo(fx-2,fy);g.stroke();g.setLineDash([]);
-    }else g.setLineDash([]);
+
+    /* Desktop always visible; mobile only when .mobile-show is toggled on. */
+    var isVisible=(W>600)||p.el.classList.contains('mobile-show');
+
+    /* Connector: only drawn while the portal panel is actually visible. */
+    if(isVisible){
+      var fx=p.fx!=null?p.fx:p.lx,fy=p.fy!=null?p.fy:p.ly;
+      var l0=gSky(p.sx+ox,p.sy+oy);
+      if(l0&&l0[2]<1){
+        g.setLineDash([3,5]);g.lineWidth=1;g.strokeStyle='rgba('+p.col+','+((.32+.45*p.h)*na*(1-.5*l0[2]))+')';
+        g.beginPath();g.moveTo(l0[0],l0[1]);g.lineTo(fx-2,fy);g.stroke();g.setLineDash([]);
+      }else g.setLineDash([]);
+    }
+
     p.stars.forEach(function(k){
       var s=c.stars[k],lp=gSky(s.x+ox,s.y+oy);
       if(!lp||lp[2]>=1)return;
       var x=lp[0],y=lp[1],fade=1-.85*lp[2];
-      /* Portal decoration rings on belt stars (Mintaka/Alnilam/Alnitak). */
+      /* Ring pulse on Orion belt stars — keep as tap affordance even when panel hidden. */
       g.strokeStyle='rgba('+p.col+','+((.5+.4*p.h)*na*fade)+')';g.lineWidth=1;g.beginPath();g.arc(x,y,8+2.5*p.h,0,6.283);g.stroke();
       var pr=reduce?0:((now*.0011+s.ph)%1);
       g.strokeStyle='rgba('+p.col+','+((1-pr)*.55*na*fade)+')';g.beginPath();g.arc(x,y,8+pr*11,0,6.283);g.stroke();
